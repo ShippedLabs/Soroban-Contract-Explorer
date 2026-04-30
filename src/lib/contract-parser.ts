@@ -1,4 +1,5 @@
 import { Contract, xdr } from "@stellar/stellar-sdk";
+import { XdrReader } from "@stellar/js-xdr";
 import { sorobanServer } from "./stellar-client";
 import type {
   ContractFunction,
@@ -57,14 +58,11 @@ async function extractSpecEntries(
     throw new Error("No contract spec found in WASM");
   }
 
+  const reader = new XdrReader(Buffer.from(new Uint8Array(sections[0])));
   const entries: xdr.ScSpecEntry[] = [];
-  let buffer = Buffer.from(new Uint8Array(sections[0]));
 
-  while (buffer.length > 0) {
-    const entry = xdr.ScSpecEntry.fromXDR(buffer);
-    entries.push(entry);
-    const encoded = entry.toXDR();
-    buffer = buffer.subarray(encoded.length);
+  while (!reader.eof) {
+    entries.push((xdr.ScSpecEntry as any).read(reader));
   }
 
   return entries;

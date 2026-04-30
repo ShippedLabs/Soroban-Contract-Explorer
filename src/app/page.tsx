@@ -1,31 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { ContractSearch } from "@/components/contract-search";
-import { fetchContractWasm } from "@/lib/contract-parser";
+import { FunctionList } from "@/components/function-list";
+import { useContract } from "@/hooks/use-contract";
 
 export default function Home() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loadedId, setLoadedId] = useState<string | null>(null);
-  const [wasmSize, setWasmSize] = useState<number | null>(null);
-
-  const handleSearch = async (contractId: string) => {
-    setLoading(true);
-    setError(null);
-    setLoadedId(null);
-    setWasmSize(null);
-
-    try {
-      const wasm = await fetchContractWasm(contractId);
-      setLoadedId(contractId);
-      setWasmSize(wasm.length);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load contract");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    metadata,
+    loading,
+    error,
+    selectedName,
+    selectFunction,
+    load,
+  } = useContract();
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -40,23 +27,26 @@ export default function Home() {
         </header>
 
         <section className="mb-8">
-          <ContractSearch onSearch={handleSearch} loading={loading} />
+          <ContractSearch onSearch={load} loading={loading} />
         </section>
 
-        <section className="text-sm">
-          {error && <p className="text-red-400">{error}</p>}
-          {!error && !loadedId && !loading && (
-            <p className="text-neutral-500">No contract loaded yet.</p>
+        <section>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+
+          {!error && !metadata && !loading && (
+            <p className="text-sm text-neutral-500">No contract loaded yet.</p>
           )}
-          {loadedId && (
-            <div className="text-neutral-300">
-              <p className="mb-1">Loaded contract:</p>
-              <p className="font-mono text-xs break-all text-neutral-400">
-                {loadedId}
+
+          {metadata && (
+            <div>
+              <p className="text-xs text-neutral-500 mb-3 font-mono break-all">
+                {metadata.contractId}
               </p>
-              <p className="mt-2 text-neutral-500">
-                WASM size: {wasmSize} bytes
-              </p>
+              <FunctionList
+                functions={metadata.functions}
+                selected={selectedName}
+                onSelect={selectFunction}
+              />
             </div>
           )}
         </section>
