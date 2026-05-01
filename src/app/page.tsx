@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
 import { FunctionForm } from "@/components/function-form";
+import { TxResult } from "@/components/tx-result";
 import { WalletConnect } from "@/components/wallet-connect";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
@@ -138,35 +139,11 @@ export default function Home() {
                   </p>
                 )}
 
-                {callError && (
-                  <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300 break-all">
-                    {callError}
-                  </div>
-                )}
-
-                {callResult !== null && !callError && (
-                  <div className="border border-neutral-800 rounded p-3 bg-neutral-950">
-                    {txHash && (
-                      <div className="mb-3">
-                        <p className="text-xs text-neutral-500 mb-1">
-                          Transaction
-                        </p>
-                        <p className="text-xs font-mono text-neutral-300 break-all">
-                          {txHash}
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-xs text-neutral-500 mb-1">Result</p>
-                    <pre className="text-xs font-mono text-neutral-200 whitespace-pre-wrap break-all">
-                      {JSON.stringify(
-                        callResult,
-                        (_, v) =>
-                          typeof v === "bigint" ? v.toString() : v,
-                        2
-                      )}
-                    </pre>
-                  </div>
-                )}
+                <TxResult
+                  result={callResult}
+                  txHash={txHash}
+                  error={callError}
+                />
               </div>
             </div>
           )}
