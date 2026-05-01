@@ -2,6 +2,7 @@
 
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
+import { FunctionForm } from "@/components/function-form";
 import { WalletConnect } from "@/components/wallet-connect";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
@@ -12,11 +13,20 @@ export default function Home() {
     loading,
     error,
     selectedName,
+    selectedFunction,
     selectFunction,
     load,
   } = useContract();
 
   const wallet = useWallet();
+
+  const handleSimulate = (values: Record<string, string>) => {
+    console.log("Simulate", selectedName, values);
+  };
+
+  const handleInvoke = (values: Record<string, string>) => {
+    console.log("Invoke", selectedName, values);
+  };
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -51,15 +61,33 @@ export default function Home() {
           )}
 
           {metadata && (
-            <div>
-              <p className="text-xs text-neutral-500 mb-3 font-mono break-all">
-                {metadata.contractId}
-              </p>
-              <FunctionList
-                functions={metadata.functions}
-                selected={selectedName}
-                onSelect={selectFunction}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-xs text-neutral-500 mb-3 font-mono break-all">
+                  {metadata.contractId}
+                </p>
+                <FunctionList
+                  functions={metadata.functions}
+                  selected={selectedName}
+                  onSelect={selectFunction}
+                />
+              </div>
+
+              <div>
+                {selectedFunction ? (
+                  <FunctionForm
+                    fn={selectedFunction}
+                    walletConnected={!!wallet.address}
+                    loading={false}
+                    onSimulate={handleSimulate}
+                    onInvoke={handleInvoke}
+                  />
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Select a function to view its inputs.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </section>
