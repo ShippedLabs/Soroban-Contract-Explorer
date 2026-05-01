@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
 import { FunctionForm } from "@/components/function-form";
 import { WalletConnect } from "@/components/wallet-connect";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
+import { argsFromValues, simulateCall } from "@/lib/invocation";
 
 export default function Home() {
   const {
@@ -20,8 +22,31 @@ export default function Home() {
 
   const wallet = useWallet();
 
-  const handleSimulate = (values: Record<string, string>) => {
-    console.log("Simulate", selectedName, values);
+  const [callLoading, setCallLoading] = useState(false);
+  const [callResult, setCallResult] = useState<unknown>(null);
+  const [callError, setCallError] = useState<string | null>(null);
+
+  const handleSimulate = async (values: Record<string, string>) => {
+    if (!metadata || !selectedFunction) return;
+
+    setCallLoading(true);
+    setCallResult(null);
+    setCallError(null);
+
+    try {
+      const args = argsFromValues(selectedFunction.params, values);
+      const result = await simulateCall(
+        metadata.contractId,
+        selectedFunction.name,
+        args,
+        wallet.address ?? undefined
+      );
+      setCallResult(result);
+    } catch (err) {
+      setCallError(err instanceof Error ? err.message : "Simulation failed");
+    } finally {
+      setCallLoading(false);
+    }
   };
 
   const handleInvoke = (values: Record<string, string>) => {
@@ -73,12 +98,12 @@ export default function Home() {
                 />
               </div>
 
-              <div>
+              <div className="flex flex-col gap-4">
                 {selectedFunction ? (
                   <FunctionForm
                     fn={selectedFunction}
                     walletConnected={!!wallet.address}
-                    loading={false}
+                    loading={callLoading}
                     onSimulate={handleSimulate}
                     onInvoke={handleInvoke}
                   />
@@ -86,6 +111,26 @@ export default function Home() {
                   <p className="text-sm text-neutral-500">
                     Select a function to view its inputs.
                   </p>
+                )}
+
+                {callError && (
+                  <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300 break-all">
+                    {callError}
+                  </div>
+                )}
+
+                {callResult !== null && !callError && (
+                  <div className="border border-neutral-800 rounded p-3 bg-neutral-950">
+                    <p className="text-xs text-neutral-500 mb-1">Result</p>
+                    <pre className="text-xs font-mono text-neutral-200 whitespace-pre-wrap break-all">
+                      {JSON.stringify(
+                        callResult,
+                        (_, v) =>
+                          typeof v === "bigint" ? v.toString() : v,
+                        2
+                      )}
+                    </pre>
+                  </div>
                 )}
               </div>
             </div>
