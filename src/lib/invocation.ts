@@ -9,6 +9,7 @@ import {
   scValToNative,
   xdr,
 } from "@stellar/stellar-sdk";
+import { signTransaction } from "@stellar/freighter-api";
 import { networkPassphrase, sorobanServer } from "./stellar-client";
 import type { FunctionParam, SorobanType } from "@/types/contract";
 
@@ -97,4 +98,63 @@ export async function simulateCall(
   }
 
   return null;
+}
+
+export interface InvokeResult {
+  txHash: string;
+  value: unknown;
+}
+
+export async function invokeCall(
+  contractId: string,
+  fnName: string,
+  args: xdr.ScVal[],
+  sourceAddress: string
+): Promise<InvokeResult> {
+  const account = await sorobanServer.getAccount(sourceAddress);
+
+  const contract = new Contract(contractId);
+  const op = contract.call(fnName, ...args);
+
+  const tx = new TransactionBuilder(account, {
+    fee: BASE_FEE,
+    networkPassphrase,
+  })
+    .addOperation(op)
+    .setTimeout(30)
+    .build();
+
+  const prepared = await sorobanServer.prepareTransaction(tx);
+
+  const signedXdr = await signTransaction(prepared.toXDR(), {
+    networkPassphrase,
+    accountToSign: sourceAddress,
+  });
+
+  const signedTx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+  const sendResp = await sorobanServer.sendTransaction(signedTx);
+
+  if (sendResp.status === "ERROR") {
+    throw new Error(
+      `Submission failed: ${JSON.stringify(sendResp.errorResult)}`
+    );
+  }
+
+  let getResp = await sorobanServer.getTransaction(sendResp.hash);
+  let attempts = 0;
+  while (getResp.status === "NOT_FOUND" && attempts < 30) {
+    await new Promise((r) => setTimeout(r, 1000));
+    getResp = await sorobanServer.getTransaction(sendResp.hash);
+    attempts++;
+  }
+
+  if (getResp.status !== "SUCCESS") {
+    throw new Error(`Transaction ${getResp.status.toLowerCase()}`);
+  }
+
+  const value = getResp.returnValue
+    ? scValToNative(getResp.returnValue)
+    : null;
+
+  return { txHash: sendResp.hash, value };
 }

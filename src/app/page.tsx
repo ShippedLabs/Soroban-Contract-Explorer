@@ -7,7 +7,7 @@ import { FunctionForm } from "@/components/function-form";
 import { WalletConnect } from "@/components/wallet-connect";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
-import { argsFromValues, simulateCall } from "@/lib/invocation";
+import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
 
 export default function Home() {
   const {
@@ -25,13 +25,19 @@ export default function Home() {
   const [callLoading, setCallLoading] = useState(false);
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  const resetCallState = () => {
+    setCallResult(null);
+    setCallError(null);
+    setTxHash(null);
+  };
 
   const handleSimulate = async (values: Record<string, string>) => {
     if (!metadata || !selectedFunction) return;
 
     setCallLoading(true);
-    setCallResult(null);
-    setCallError(null);
+    resetCallState();
 
     try {
       const args = argsFromValues(selectedFunction.params, values);
@@ -49,8 +55,27 @@ export default function Home() {
     }
   };
 
-  const handleInvoke = (values: Record<string, string>) => {
-    console.log("Invoke", selectedName, values);
+  const handleInvoke = async (values: Record<string, string>) => {
+    if (!metadata || !selectedFunction || !wallet.address) return;
+
+    setCallLoading(true);
+    resetCallState();
+
+    try {
+      const args = argsFromValues(selectedFunction.params, values);
+      const { txHash: hash, value } = await invokeCall(
+        metadata.contractId,
+        selectedFunction.name,
+        args,
+        wallet.address
+      );
+      setTxHash(hash);
+      setCallResult(value);
+    } catch (err) {
+      setCallError(err instanceof Error ? err.message : "Invocation failed");
+    } finally {
+      setCallLoading(false);
+    }
   };
 
   return (
@@ -121,6 +146,16 @@ export default function Home() {
 
                 {callResult !== null && !callError && (
                   <div className="border border-neutral-800 rounded p-3 bg-neutral-950">
+                    {txHash && (
+                      <div className="mb-3">
+                        <p className="text-xs text-neutral-500 mb-1">
+                          Transaction
+                        </p>
+                        <p className="text-xs font-mono text-neutral-300 break-all">
+                          {txHash}
+                        </p>
+                      </div>
+                    )}
                     <p className="text-xs text-neutral-500 mb-1">Result</p>
                     <pre className="text-xs font-mono text-neutral-200 whitespace-pre-wrap break-all">
                       {JSON.stringify(
