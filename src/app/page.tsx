@@ -9,6 +9,7 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
 import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
+import { appNetwork } from "@/lib/stellar-client";
 
 export default function Home() {
   const {
@@ -93,12 +94,25 @@ export default function Home() {
           </div>
           <WalletConnect
             address={wallet.address}
+            network={wallet.network}
             connecting={wallet.connecting}
             error={wallet.error}
             onConnect={wallet.connect}
             onDisconnect={wallet.disconnect}
           />
         </header>
+
+        {wallet.address &&
+          wallet.network &&
+          wallet.network !== appNetwork && (
+            <div className="mb-6 border border-yellow-900 bg-yellow-950/30 rounded p-3 text-xs text-yellow-200">
+              Your wallet is on{" "}
+              <span className="capitalize font-medium">{wallet.network}</span>{" "}
+              but this app is configured for{" "}
+              <span className="capitalize font-medium">{appNetwork}</span>.
+              Switch networks in Freighter before submitting transactions.
+            </div>
+          )}
 
         <section className="mb-8">
           <ContractSearch onSearch={load} loading={loading} />

@@ -5,11 +5,22 @@ import {
   isConnected,
   isAllowed,
   getPublicKey,
+  getNetwork,
   requestAccess,
 } from "@stellar/freighter-api";
 
+function normalizeNetwork(value: string): "testnet" | "mainnet" | "other" {
+  const upper = value.toUpperCase();
+  if (upper === "TESTNET") return "testnet";
+  if (upper === "PUBLIC" || upper === "MAINNET") return "mainnet";
+  return "other";
+}
+
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
+  const [network, setNetwork] = useState<"testnet" | "mainnet" | "other" | null>(
+    null
+  );
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +32,10 @@ export function useWallet() {
         if (!installed) return;
         const allowed = await isAllowed();
         if (!allowed) return;
-        const pk = await getPublicKey();
-        if (!cancelled && pk) setAddress(pk);
+        const [pk, net] = await Promise.all([getPublicKey(), getNetwork()]);
+        if (cancelled) return;
+        if (pk) setAddress(pk);
+        if (net) setNetwork(normalizeNetwork(net));
       } catch {
         // user hasn't authorized this site yet
       }
@@ -50,6 +63,8 @@ export function useWallet() {
       }
 
       setAddress(pk);
+      const net = await getNetwork();
+      if (net) setNetwork(normalizeNetwork(net));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect");
     } finally {
@@ -59,8 +74,9 @@ export function useWallet() {
 
   const disconnect = useCallback(() => {
     setAddress(null);
+    setNetwork(null);
     setError(null);
   }, []);
 
-  return { address, connecting, error, connect, disconnect };
+  return { address, network, connecting, error, connect, disconnect };
 }
