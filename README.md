@@ -4,6 +4,8 @@ A web application for interacting with any Soroban contract function without wri
 
 Live demo: https://soroban-contract-explorer.vercel.app/
 
+![Soroban Contract Explorer screenshot](docs/screenshot.png)
+
 ## Motivation
 
 If you want to call a function on a deployed Soroban contract today, you need to write a script or use the CLI. That works for developers, but it shuts out everyone else, and it is slow even for developers who just want to poke at a contract quickly.
