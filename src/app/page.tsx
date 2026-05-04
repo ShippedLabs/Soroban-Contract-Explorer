@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
 import { FunctionForm } from "@/components/function-form";
+import { RecentContracts } from "@/components/recent-contracts";
 import { TxResult } from "@/components/tx-result";
 import { WalletConnect } from "@/components/wallet-connect";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
 import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
+import {
+  addRecentContract,
+  getRecentContracts,
+  removeRecentContract,
+} from "@/lib/recent-contracts";
 import { appNetwork } from "@/lib/stellar-client";
 
 export default function Home() {
@@ -28,6 +34,21 @@ export default function Home() {
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [recents, setRecents] = useState<string[]>([]);
+
+  useEffect(() => {
+    setRecents(getRecentContracts());
+  }, []);
+
+  useEffect(() => {
+    if (metadata?.contractId) {
+      setRecents(addRecentContract(metadata.contractId));
+    }
+  }, [metadata?.contractId]);
+
+  const handleRemoveRecent = (id: string) => {
+    setRecents(removeRecentContract(id));
+  };
 
   const resetCallState = () => {
     setCallResult(null);
@@ -114,8 +135,13 @@ export default function Home() {
             </div>
           )}
 
-        <section className="mb-8">
+        <section className="mb-8 flex flex-col gap-4">
           <ContractSearch onSearch={load} loading={loading} />
+          <RecentContracts
+            contracts={recents}
+            onSelect={load}
+            onRemove={handleRemoveRecent}
+          />
         </section>
 
         <section>
