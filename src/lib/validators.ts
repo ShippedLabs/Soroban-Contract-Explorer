@@ -1,15 +1,15 @@
 import { StrKey } from "@stellar/stellar-sdk";
 import type { SorobanType } from "@/types/contract";
 
-const U32_MAX = 4_294_967_295n;
-const I32_MIN = -2_147_483_648n;
-const I32_MAX = 2_147_483_647n;
-const U64_MAX = 18_446_744_073_709_551_615n;
-const I64_MIN = -9_223_372_036_854_775_808n;
-const I64_MAX = 9_223_372_036_854_775_807n;
-const U128_MAX = 2n ** 128n - 1n;
-const I128_MIN = -(2n ** 127n);
-const I128_MAX = 2n ** 127n - 1n;
+const U32_MAX = BigInt("4294967295");
+const I32_MIN = BigInt("-2147483648");
+const I32_MAX = BigInt("2147483647");
+const U64_MAX = BigInt("18446744073709551615");
+const I64_MIN = BigInt("-9223372036854775808");
+const I64_MAX = BigInt("9223372036854775807");
+const U128_MAX = BigInt("340282366920938463463374607431768211455");
+const I128_MIN = BigInt("-170141183460469231731687303715884105728");
+const I128_MAX = BigInt("170141183460469231731687303715884105727");
 
 const SYMBOL_REGEX = /^[a-zA-Z0-9_]{0,32}$/;
 const HEX_REGEX = /^[0-9a-fA-F]*$/;
@@ -82,15 +82,15 @@ export function validateValue(
 ): string | null {
   switch (type) {
     case "U32":
-      return validateInt(value, 0n, U32_MAX, "U32");
+      return validateInt(value, BigInt(0), U32_MAX, "U32");
     case "I32":
       return validateInt(value, I32_MIN, I32_MAX, "I32");
     case "U64":
-      return validateInt(value, 0n, U64_MAX, "U64");
+      return validateInt(value, BigInt(0), U64_MAX, "U64");
     case "I64":
       return validateInt(value, I64_MIN, I64_MAX, "I64");
     case "U128":
-      return validateInt(value, 0n, U128_MAX, "U128");
+      return validateInt(value, BigInt(0), U128_MAX, "U128");
     case "I128":
       return validateInt(value, I128_MIN, I128_MAX, "I128");
     case "Bool":
