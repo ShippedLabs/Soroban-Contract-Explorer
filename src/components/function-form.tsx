@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import type { ContractFunction, FunctionParam } from "@/types/contract";
+import { validateValue } from "@/lib/validators";
 
 interface Props {
   fn: ContractFunction;
@@ -43,15 +44,21 @@ export function FunctionForm({
   onInvoke,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     const initial: Record<string, string> = {};
     fn.params.forEach((p) => (initial[p.name] = ""));
     setValues(initial);
+    setErrors({});
   }, [fn]);
 
-  const handleChange = (name: string, value: string) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
+  const handleChange = (param: FunctionParam, value: string) => {
+    setValues((prev) => ({ ...prev, [param.name]: value }));
+    setErrors((prev) => ({
+      ...prev,
+      [param.name]: validateValue(value, param.type, param.inner),
+    }));
   };
 
   const handleSimulate = (e: FormEvent) => {
@@ -88,11 +95,18 @@ export function FunctionForm({
               <input
                 type="text"
                 value={values[p.name] ?? ""}
-                onChange={(e) => handleChange(p.name, e.target.value)}
+                onChange={(e) => handleChange(p, e.target.value)}
                 placeholder={placeholderFor(p)}
-                className="px-3 py-1.5 bg-neutral-900 border border-neutral-700 rounded text-sm font-mono focus:outline-none focus:border-neutral-500"
+                className={`px-3 py-1.5 bg-neutral-900 border rounded text-sm font-mono focus:outline-none focus:border-neutral-500 ${
+                  errors[p.name]
+                    ? "border-red-700"
+                    : "border-neutral-700"
+                }`}
                 disabled={loading}
               />
+              {errors[p.name] && (
+                <span className="text-xs text-red-400">{errors[p.name]}</span>
+              )}
             </label>
           ))}
         </div>
