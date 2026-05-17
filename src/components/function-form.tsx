@@ -61,6 +61,8 @@ export function FunctionForm({
     }));
   };
 
+  const hasErrors = Object.values(errors).some(Boolean);
+
   const handleSimulate = (e: FormEvent) => {
     e.preventDefault();
     onSimulate(values);
@@ -115,15 +117,15 @@ export function FunctionForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={loading}
-          className="px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-200 rounded text-xs font-medium disabled:opacity-50"
+          disabled={loading || hasErrors}
+          className="px-3 py-1.5 bg-neutral-800 border border-neutral-700 text-neutral-200 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Running..." : "Simulate"}
         </button>
         <button
           type="button"
           onClick={handleInvoke}
-          disabled={loading || !walletConnected}
+          disabled={loading || hasErrors || !walletConnected}
           title={
             !walletConnected
               ? "Connect a wallet to submit"
