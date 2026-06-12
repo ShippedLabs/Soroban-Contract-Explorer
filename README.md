@@ -49,6 +49,13 @@ npm run dev
 
 Open http://localhost:3000.
 
+## Documentation
+
+Detailed docs live in the [docs/](docs) folder:
+
+- [docs/documentation.md](docs/documentation.md) explains how the app works, its architecture, configuration, supported Soroban types, input formats, and troubleshooting.
+- [docs/contributing.md](docs/contributing.md) covers development setup, project conventions, how to add support for a new Soroban type, testing, and the pull request process.
+
 ## License
 
 MIT
