@@ -10,7 +10,7 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
-import { networkPassphrase, sorobanServer } from "./stellar-client";
+import { getNetworkPassphrase, getSorobanServer, type StellarNetwork } from "./stellar-client";
 import type { FunctionParam, SorobanType } from "@/types/contract";
 
 function valueToScVal(
@@ -71,8 +71,12 @@ export async function simulateCall(
   contractId: string,
   fnName: string,
   args: xdr.ScVal[],
-  sourceAddress?: string
+  sourceAddress: string | undefined,
+  network: StellarNetwork
 ): Promise<unknown> {
+  const sorobanServer = getSorobanServer(network);
+  const passphrase = getNetworkPassphrase(network);
+
   const sourceKey = sourceAddress || Keypair.random().publicKey();
   const account = new Account(sourceKey, "0");
 
@@ -81,7 +85,7 @@ export async function simulateCall(
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
-    networkPassphrase,
+    networkPassphrase: passphrase,
   })
     .addOperation(op)
     .setTimeout(30)
@@ -109,8 +113,12 @@ export async function invokeCall(
   contractId: string,
   fnName: string,
   args: xdr.ScVal[],
-  sourceAddress: string
+  sourceAddress: string,
+  network: StellarNetwork
 ): Promise<InvokeResult> {
+  const sorobanServer = getSorobanServer(network);
+  const passphrase = getNetworkPassphrase(network);
+
   const account = await sorobanServer.getAccount(sourceAddress);
 
   const contract = new Contract(contractId);
@@ -118,7 +126,7 @@ export async function invokeCall(
 
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
-    networkPassphrase,
+    networkPassphrase: passphrase,
   })
     .addOperation(op)
     .setTimeout(30)
@@ -127,11 +135,11 @@ export async function invokeCall(
   const prepared = await sorobanServer.prepareTransaction(tx);
 
   const signedXdr = await signTransaction(prepared.toXDR(), {
-    networkPassphrase,
+    networkPassphrase: passphrase,
     accountToSign: sourceAddress,
   });
 
-  const signedTx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase);
+  const signedTx = TransactionBuilder.fromXDR(signedXdr, passphrase);
   const sendResp = await sorobanServer.sendTransaction(signedTx);
 
   if (sendResp.status === "ERROR") {

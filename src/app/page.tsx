@@ -7,6 +7,7 @@ import { FunctionForm } from "@/components/function-form";
 import { RecentContracts } from "@/components/recent-contracts";
 import { TxResult } from "@/components/tx-result";
 import { WalletConnect } from "@/components/wallet-connect";
+import { NetworkToggle } from "@/components/network-toggle";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
 import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
@@ -15,7 +16,7 @@ import {
   getRecentContracts,
   removeRecentContract,
 } from "@/lib/recent-contracts";
-import { appNetwork } from "@/lib/stellar-client";
+import { defaultNetwork, type StellarNetwork } from "@/lib/stellar-client";
 
 export default function Home() {
   const {
@@ -26,10 +27,12 @@ export default function Home() {
     selectedFunction,
     selectFunction,
     load,
+    network: contractNetwork,
   } = useContract();
 
   const wallet = useWallet();
 
+  const [selectedNetwork, setSelectedNetwork] = useState<StellarNetwork>(defaultNetwork);
   const [callLoading, setCallLoading] = useState(false);
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
@@ -57,7 +60,7 @@ export default function Home() {
   };
 
   const handleSimulate = async (values: Record<string, string>) => {
-    if (!metadata || !selectedFunction) return;
+    if (!metadata || !selectedFunction || !contractNetwork) return;
 
     setCallLoading(true);
     resetCallState();
@@ -68,7 +71,8 @@ export default function Home() {
         metadata.contractId,
         selectedFunction.name,
         args,
-        wallet.address ?? undefined
+        wallet.address ?? undefined,
+        contractNetwork
       );
       setCallResult(result);
     } catch (err) {
@@ -79,7 +83,7 @@ export default function Home() {
   };
 
   const handleInvoke = async (values: Record<string, string>) => {
-    if (!metadata || !selectedFunction || !wallet.address) return;
+    if (!metadata || !selectedFunction || !wallet.address || !contractNetwork) return;
 
     setCallLoading(true);
     resetCallState();
@@ -90,7 +94,8 @@ export default function Home() {
         metadata.contractId,
         selectedFunction.name,
         args,
-        wallet.address
+        wallet.address,
+        contractNetwork
       );
       setTxHash(hash);
       setCallResult(value);
@@ -104,7 +109,7 @@ export default function Home() {
   return (
     <main className="min-h-screen px-6 py-10">
       <div className="max-w-4xl mx-auto">
-        <header className="mb-8 flex items-start justify-between gap-4">
+        <header className="mb-8 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-semibold mb-1">
               Soroban Contract Explorer
@@ -113,33 +118,37 @@ export default function Home() {
               Paste a contract ID to view and call its functions.
             </p>
           </div>
-          <WalletConnect
-            address={wallet.address}
-            network={wallet.network}
-            connecting={wallet.connecting}
-            error={wallet.error}
-            onConnect={wallet.connect}
-            onDisconnect={wallet.disconnect}
-          />
+          <div className="flex items-center gap-4 flex-wrap">
+            <NetworkToggle network={selectedNetwork} onChange={setSelectedNetwork} />
+            <WalletConnect
+              address={wallet.address}
+              network={wallet.network}
+              connecting={wallet.connecting}
+              error={wallet.error}
+              onConnect={wallet.connect}
+              onDisconnect={wallet.disconnect}
+            />
+          </div>
         </header>
 
         {wallet.address &&
           wallet.network &&
-          wallet.network !== appNetwork && (
+          contractNetwork &&
+          wallet.network !== contractNetwork && (
             <div className="mb-6 border border-yellow-900 bg-yellow-950/30 rounded p-3 text-xs text-yellow-200">
               Your wallet is on{" "}
               <span className="capitalize font-medium">{wallet.network}</span>{" "}
-              but this app is configured for{" "}
-              <span className="capitalize font-medium">{appNetwork}</span>.
+              but this contract is on{" "}
+              <span className="capitalize font-medium">{contractNetwork}</span>.
               Switch networks in Freighter before submitting transactions.
             </div>
           )}
 
         <section className="mb-8 flex flex-col gap-4">
-          <ContractSearch onSearch={load} loading={loading} />
+          <ContractSearch onSearch={(id) => load(id, selectedNetwork)} loading={loading} />
           <RecentContracts
             contracts={recents}
-            onSelect={load}
+            onSelect={(id) => load(id, selectedNetwork)}
             onRemove={handleRemoveRecent}
           />
         </section>
@@ -183,6 +192,7 @@ export default function Home() {
                   result={callResult}
                   txHash={txHash}
                   error={callError}
+                  network={contractNetwork}
                 />
               </div>
             </div>
