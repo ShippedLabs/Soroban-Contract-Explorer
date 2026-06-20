@@ -72,9 +72,16 @@ async function extractSpecEntries(
   return entries;
 }
 
-function mapSpecType(type: xdr.ScSpecTypeDef): {
+function mapSpecType(
+  type: xdr.ScSpecTypeDef,
+  entries: xdr.ScSpecEntry[]
+): {
   type: SorobanType;
   inner?: SorobanType;
+  keyType?: SorobanType;
+  valueType?: SorobanType;
+  fields?: FunctionParam[];
+  variants?: string[];
 } {
   switch (type.switch().name) {
     case "scSpecTypeU32":
@@ -101,12 +108,67 @@ function mapSpecType(type: xdr.ScSpecTypeDef): {
     case "scSpecTypeAddress":
       return { type: "Address" };
     case "scSpecTypeVec": {
-      const inner = mapSpecType(type.vec().elementType());
+      const inner = mapSpecType(type.vec().elementType(), entries);
       return { type: "Vec", inner: inner.type };
     }
     case "scSpecTypeOption": {
-      const inner = mapSpecType(type.option().valueType());
+      const inner = mapSpecType(type.option().valueType(), entries);
       return { type: "Option", inner: inner.type };
+    }
+    case "scSpecTypeMap": {
+      const key = mapSpecType(type.map().keyType(), entries);
+      const val = mapSpecType(type.map().valueType(), entries);
+      return {
+        type: "Map",
+        keyType: key.type,
+        valueType: val.type,
+      };
+    }
+    case "scSpecTypeUdt": {
+      const udtName = type.udt().name().toString();
+      const udtEntry = entries.find((entry) => {
+        const entryName = entry.switch().name;
+        if (entryName === "scSpecEntryUdtStructV0") {
+          return entry.udtStructV0().name().toString() === udtName;
+        }
+        if (entryName === "scSpecEntryUdtEnumV0") {
+          return entry.udtEnumV0().name().toString() === udtName;
+        }
+        return false;
+      });
+
+      if (!udtEntry) {
+        return { type: "Unknown" };
+      }
+
+      if (udtEntry.switch().name === "scSpecEntryUdtStructV0") {
+        const structFields = udtEntry.udtStructV0().fields().map((field: any) => {
+          const mapped = mapSpecType(field.type(), entries);
+          return {
+            name: field.name().toString(),
+            type: mapped.type,
+            inner: mapped.inner,
+            keyType: mapped.keyType,
+            valueType: mapped.valueType,
+            fields: mapped.fields,
+            variants: mapped.variants,
+          };
+        });
+        return {
+          type: "Struct",
+          fields: structFields,
+        };
+      }
+
+      if (udtEntry.switch().name === "scSpecEntryUdtEnumV0") {
+        const cases = udtEntry.udtEnumV0().cases().map((c: any) => c.name().toString());
+        return {
+          type: "Enum",
+          variants: cases,
+        };
+      }
+
+      return { type: "Unknown" };
     }
     default:
       return { type: "Unknown" };
@@ -123,17 +185,21 @@ function extractFunctions(entries: xdr.ScSpecEntry[]): ContractFunction[] {
     const name = fn.name().toString();
 
     const params: FunctionParam[] = fn.inputs().map((input) => {
-      const mapped = mapSpecType(input.type());
+      const mapped = mapSpecType(input.type(), entries);
       return {
         name: input.name().toString(),
         type: mapped.type,
         inner: mapped.inner,
+        keyType: mapped.keyType,
+        valueType: mapped.valueType,
+        fields: mapped.fields,
+        variants: mapped.variants,
       };
     });
 
     const outputs = fn.outputs();
     const returnType: SorobanType =
-      outputs.length > 0 ? mapSpecType(outputs[0]).type : "Unknown";
+      outputs.length > 0 ? mapSpecType(outputs[0], entries).type : "Unknown";
 
     functions.push({ name, params, returnType, isReadOnly: false });
   }

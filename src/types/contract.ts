@@ -12,13 +12,21 @@ export type SorobanType =
   | "Address"
   | "Vec"
   | "Option"
+  | "Map"
+  | "Struct"
+  | "Enum"
   | "Unknown";
 
 export interface FunctionParam {
   name: string;
   type: SorobanType;
   inner?: SorobanType;
+  keyType?: SorobanType;
+  valueType?: SorobanType;
+  fields?: FunctionParam[];
+  variants?: string[];
 }
+
 
 export interface ContractFunction {
   name: string;
