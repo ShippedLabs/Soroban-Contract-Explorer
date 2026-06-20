@@ -1,6 +1,6 @@
 import { Contract, xdr } from "@stellar/stellar-sdk";
 import { XdrReader } from "@stellar/js-xdr";
-import { sorobanServer } from "./stellar-client";
+import { getSorobanServer, type StellarNetwork } from "./stellar-client";
 import type {
   ContractFunction,
   ContractMetadata,
@@ -8,8 +8,12 @@ import type {
   SorobanType,
 } from "@/types/contract";
 
-export async function fetchContractWasm(contractId: string): Promise<Buffer> {
+export async function fetchContractWasm(
+  contractId: string,
+  network: StellarNetwork
+): Promise<Buffer> {
   const contract = new Contract(contractId);
+  const sorobanServer = getSorobanServer(network);
 
   const instanceKey = xdr.LedgerKey.contractData(
     new xdr.LedgerKeyContractData({
@@ -138,9 +142,10 @@ function extractFunctions(entries: xdr.ScSpecEntry[]): ContractFunction[] {
 }
 
 export async function loadContractMetadata(
-  contractId: string
+  contractId: string,
+  network: StellarNetwork
 ): Promise<ContractMetadata> {
-  const wasm = await fetchContractWasm(contractId);
+  const wasm = await fetchContractWasm(contractId, network);
   const entries = await extractSpecEntries(wasm);
   const functions = extractFunctions(entries);
   return { contractId, functions };

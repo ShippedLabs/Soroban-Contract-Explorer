@@ -6,10 +6,8 @@ interface Props {
   result: unknown;
   txHash: string | null;
   error: string | null;
+  network?: "testnet" | "mainnet" | null;
 }
-
-const NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || "testnet";
-const EXPLORER_PATH = NETWORK === "mainnet" ? "public" : "testnet";
 
 function formatValue(value: unknown): string {
   return JSON.stringify(
@@ -43,7 +41,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function TxResult({ result, txHash, error }: Props) {
+export function TxResult({ result, txHash, error, network }: Props) {
   if (error) {
     return (
       <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300 break-all">
@@ -54,8 +52,9 @@ export function TxResult({ result, txHash, error }: Props) {
 
   if (result === null && !txHash) return null;
 
+  const explorerPath = network === "mainnet" ? "public" : "testnet";
   const explorerUrl = txHash
-    ? `https://stellar.expert/explorer/${EXPLORER_PATH}/tx/${txHash}`
+    ? `https://stellar.expert/explorer/${explorerPath}/tx/${txHash}`
     : null;
 
   return (
