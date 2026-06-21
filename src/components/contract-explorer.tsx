@@ -16,6 +16,8 @@ import {
   addRecentContract,
   getRecentContracts,
   removeRecentContract,
+  updateRecentContractNickname,
+  type RecentContract,
 } from "@/lib/recent-contracts";
 import { defaultNetwork, type StellarNetwork } from "@/lib/stellar-client";
 
@@ -53,7 +55,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [recents, setRecents] = useState<string[]>([]);
+  const [recents, setRecents] = useState<RecentContract[]>([]);
 
   // Load contract when ID or Network changes
   useEffect(() => {
@@ -74,6 +76,10 @@ function ContractExplorerInner({ initialContractId }: Props) {
 
   const handleRemoveRecent = (id: string) => {
     setRecents(removeRecentContract(id));
+  };
+
+  const handleUpdateNickname = (id: string, nickname: string) => {
+    setRecents(updateRecentContractNickname(id, nickname));
   };
 
   const resetCallState = () => {
@@ -193,6 +199,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
             contracts={recents}
             onSelect={handleSelectRecent}
             onRemove={handleRemoveRecent}
+            onUpdateNickname={handleUpdateNickname}
           />
         </section>
 
