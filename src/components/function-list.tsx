@@ -36,7 +36,14 @@ export function FunctionList({ functions, selected, onSelect }: Props) {
                   : "bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-700"
               }`}
             >
-              {formatSignature(fn)}
+              <span className="flex items-center gap-2">
+                <span>{formatSignature(fn)}</span>
+                {fn.isReadOnly === true && (
+                  <span className="text-[10px] font-sans font-medium px-1.5 py-0.5 rounded bg-neutral-700 text-neutral-400 border border-neutral-600 shrink-0">
+                    view
+                  </span>
+                )}
+              </span>
             </button>
           </li>
         );

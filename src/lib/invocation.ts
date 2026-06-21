@@ -67,13 +67,18 @@ export function argsFromValues(
   return params.map((p) => valueToScVal(values[p.name] ?? "", p.type, p.inner));
 }
 
+export interface SimulateResult {
+  value: unknown;
+  isReadOnly: boolean;
+}
+
 export async function simulateCall(
   contractId: string,
   fnName: string,
   args: xdr.ScVal[],
   sourceAddress: string | undefined,
   network: StellarNetwork
-): Promise<unknown> {
+): Promise<SimulateResult> {
   const sorobanServer = getSorobanServer(network);
   const passphrase = getNetworkPassphrase(network);
 
@@ -97,11 +102,17 @@ export async function simulateCall(
     throw new Error(result.error);
   }
 
-  if ("result" in result && result.result?.retval) {
-    return scValToNative(result.result.retval);
-  }
+  const isReadOnly =
+    "transactionData" in result
+      ? result.transactionData.getFootprint().readWrite().length === 0
+      : true;
 
-  return null;
+  const value =
+    "result" in result && result.result?.retval
+      ? scValToNative(result.result.retval)
+      : null;
+
+  return { value, isReadOnly };
 }
 
 export interface InvokeResult {
