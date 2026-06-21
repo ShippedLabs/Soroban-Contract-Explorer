@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
-import type { ContractFunction, FunctionParam } from "@/types/contract";
+import { useState, useEffect, useRef, FormEvent } from "react";
+import type {
+  ContractFunction,
+  FunctionParam,
+  SorobanType,
+} from "@/types/contract";
 import { validateValue } from "@/lib/validators";
 
 interface Props {
@@ -36,6 +40,17 @@ function placeholderFor(param: FunctionParam): string {
   }
 }
 
+function isIntegerType(type: SorobanType): boolean {
+  return (
+    type === "U32" ||
+    type === "I32" ||
+    type === "U64" ||
+    type === "I64" ||
+    type === "U128" ||
+    type === "I128"
+  );
+}
+
 export function FunctionForm({
   fn,
   walletConnected,
@@ -45,12 +60,14 @@ export function FunctionForm({
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
     const initial: Record<string, string> = {};
     fn.params.forEach((p) => (initial[p.name] = ""));
     setValues(initial);
     setErrors({});
+    inputRefs.current[0]?.focus();
   }, [fn]);
 
   const handleChange = (param: FunctionParam, value: string) => {
@@ -88,14 +105,18 @@ export function FunctionForm({
         <p className="text-xs text-neutral-500 mb-4">No parameters.</p>
       ) : (
         <div className="flex flex-col gap-3 mb-4">
-          {fn.params.map((p) => (
+          {fn.params.map((p, index) => (
             <label key={p.name} className="flex flex-col gap-1">
               <span className="text-xs text-neutral-400 font-mono">
                 {p.name}: {p.type}
                 {p.inner ? `<${p.inner}>` : ""}
               </span>
               <input
+                ref={(input) => {
+                  inputRefs.current[index] = input;
+                }}
                 type="text"
+                inputMode={isIntegerType(p.type) ? "numeric" : undefined}
                 value={values[p.name] ?? ""}
                 onChange={(e) => handleChange(p, e.target.value)}
                 placeholder={placeholderFor(p)}
