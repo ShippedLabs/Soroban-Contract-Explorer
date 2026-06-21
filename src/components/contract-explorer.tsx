@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ContractSearch } from "@/components/contract-search";
+import { CopyButton } from "@/components/copy-button";
 import { FunctionList } from "@/components/function-list";
 import { FunctionForm } from "@/components/function-form";
 import { RecentContracts } from "@/components/recent-contracts";
@@ -213,9 +214,15 @@ function ContractExplorerInner({ initialContractId }: Props) {
           {!loading && metadata && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs text-neutral-500 mb-3 font-mono break-all">
-                  {metadata.contractId}
-                </p>
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <p className="text-xs text-neutral-500 font-mono break-all">
+                    {metadata.contractId}
+                  </p>
+                  <CopyButton
+                    text={metadata.contractId}
+                    className="shrink-0 text-xs text-neutral-500 hover:text-neutral-300"
+                  />
+                </div>
                 <FunctionList
                   functions={metadata.functions}
                   selected={selectedName}
