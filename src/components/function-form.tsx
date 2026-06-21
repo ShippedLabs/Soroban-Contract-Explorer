@@ -10,6 +10,7 @@ interface Props {
   loading: boolean;
   onSimulate: (values: Record<string, string>) => void;
   onInvoke: (values: Record<string, string>) => void;
+  onClear?: () => void;
 }
 
 function placeholderFor(param: FunctionParam): string {
@@ -42,6 +43,7 @@ export function FunctionForm({
   loading,
   onSimulate,
   onInvoke,
+  onClear,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
@@ -62,6 +64,7 @@ export function FunctionForm({
   };
 
   const hasErrors = Object.values(errors).some(Boolean);
+  const hasValues = Object.values(values).some((value) => value.trim() !== "");
 
   const handleSimulate = (e: FormEvent) => {
     e.preventDefault();
@@ -70,6 +73,14 @@ export function FunctionForm({
 
   const handleInvoke = () => {
     onInvoke(values);
+  };
+
+  const handleClear = () => {
+    const emptyValues: Record<string, string> = {};
+    fn.params.forEach((p) => (emptyValues[p.name] = ""));
+    setValues(emptyValues);
+    setErrors({});
+    onClear?.();
   };
 
   return (
@@ -134,6 +145,14 @@ export function FunctionForm({
           className="px-3 py-1.5 bg-neutral-200 text-neutral-900 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Submit
+        </button>
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={loading || (!hasValues && !hasErrors)}
+          className="px-3 py-1.5 bg-transparent border border-neutral-700 text-neutral-300 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Clear
         </button>
       </div>
     </form>

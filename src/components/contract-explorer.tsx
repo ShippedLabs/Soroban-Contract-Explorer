@@ -231,6 +231,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                     loading={callLoading}
                     onSimulate={handleSimulate}
                     onInvoke={handleInvoke}
+                    onClear={resetCallState}
                   />
                 ) : (
                   <p className="text-sm text-neutral-500">
