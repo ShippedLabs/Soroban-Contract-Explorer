@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useCallback, useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
@@ -76,11 +76,15 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setRecents(removeRecentContract(id));
   };
 
-  const resetCallState = () => {
+  const resetCallState = useCallback(() => {
     setCallResult(null);
     setCallError(null);
     setTxHash(null);
-  };
+  }, []);
+
+  useEffect(() => {
+    resetCallState();
+  }, [metadata?.contractId, resetCallState, selectedName]);
 
   const handleSimulate = async (values: Record<string, string>) => {
     if (!metadata || !selectedFunction || !contractNetwork) return;
