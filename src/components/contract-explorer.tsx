@@ -45,6 +45,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
     selectFunction,
     load,
     network: contractNetwork,
+    patchFunctionReadOnly,
   } = useContract();
 
   const wallet = useWallet();
@@ -90,14 +91,15 @@ function ContractExplorerInner({ initialContractId }: Props) {
 
     try {
       const args = argsFromValues(selectedFunction.params, values);
-      const result = await simulateCall(
+      const { value, isReadOnly } = await simulateCall(
         metadata.contractId,
         selectedFunction.name,
         args,
         wallet.address ?? undefined,
         contractNetwork
       );
-      setCallResult(result);
+      setCallResult(value);
+      patchFunctionReadOnly(selectedFunction.name, isReadOnly);
     } catch (err) {
       setCallError(err instanceof Error ? err.message : "Simulation failed");
     } finally {

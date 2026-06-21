@@ -201,7 +201,7 @@ function extractFunctions(entries: xdr.ScSpecEntry[]): ContractFunction[] {
     const returnType: SorobanType =
       outputs.length > 0 ? mapSpecType(outputs[0], entries).type : "Unknown";
 
-    functions.push({ name, params, returnType, isReadOnly: false });
+    functions.push({ name, params, returnType, isReadOnly: null });
   }
 
   return functions;
