@@ -9,6 +9,7 @@ import { RecentContracts } from "@/components/recent-contracts";
 import { TxResult } from "@/components/tx-result";
 import { WalletConnect } from "@/components/wallet-connect";
 import { NetworkToggle } from "@/components/network-toggle";
+import { CopyButton } from "@/components/copy-button";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
 import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
@@ -220,9 +221,12 @@ function ContractExplorerInner({ initialContractId }: Props) {
           {!loading && metadata && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs text-neutral-500 mb-3 font-mono break-all">
-                  {metadata.contractId}
-                </p>
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-xs text-neutral-500 font-mono break-all">
+                    {metadata.contractId}
+                  </p>
+                  <CopyButton text={metadata.contractId} />
+                </div>
                 <FunctionList
                   functions={metadata.functions}
                   selected={selectedName}
