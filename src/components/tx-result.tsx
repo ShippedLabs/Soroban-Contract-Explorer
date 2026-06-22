@@ -7,6 +7,7 @@ interface Props {
   txHash: string | null;
   error: string | null;
   network?: "testnet" | "mainnet" | null;
+  estimatedFee?: string | null;
 }
 
 function formatValue(value: unknown): string {
@@ -41,7 +42,14 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function TxResult({ result, txHash, error, network }: Props) {
+function formatFee(stroops: string): string {
+  const n = parseInt(stroops, 10);
+  if (isNaN(n)) return `${stroops} stroops`;
+  const xlm = (n / 10_000_000).toFixed(7).replace(/\.?0+$/, "");
+  return `${n.toLocaleString()} stroops (${xlm} XLM)`;
+}
+
+export function TxResult({ result, txHash, error, network, estimatedFee }: Props) {
   if (error) {
     return (
       <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300 break-all">
@@ -80,6 +88,13 @@ export function TxResult({ result, txHash, error, network }: Props) {
           <p className="text-xs font-mono text-neutral-300 break-all">
             {txHash}
           </p>
+        </div>
+      )}
+
+      {estimatedFee && (
+        <div>
+          <p className="text-xs text-neutral-500 mb-1">Estimated resource fee</p>
+          <p className="text-xs font-mono text-neutral-300">{formatFee(estimatedFee)}</p>
         </div>
       )}
 

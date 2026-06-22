@@ -11,7 +11,7 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { NetworkToggle } from "@/components/network-toggle";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
-import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
+import { argsFromValues, invokeCall, simulateCall, type SimulateResult } from "@/lib/invocation";
 import {
   addRecentContract,
   getRecentContracts,
@@ -53,6 +53,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [estimatedFee, setEstimatedFee] = useState<string | null>(null);
   const [recents, setRecents] = useState<string[]>([]);
 
   // Load contract when ID or Network changes
@@ -80,7 +81,12 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallResult(null);
     setCallError(null);
     setTxHash(null);
+    setEstimatedFee(null);
   };
+
+  useEffect(() => {
+    setEstimatedFee(null);
+  }, [selectedFunction]);
 
   const handleSimulate = async (values: Record<string, string>) => {
     if (!metadata || !selectedFunction || !contractNetwork) return;
@@ -90,14 +96,15 @@ function ContractExplorerInner({ initialContractId }: Props) {
 
     try {
       const args = argsFromValues(selectedFunction.params, values);
-      const result = await simulateCall(
+      const { value, minResourceFee }: SimulateResult = await simulateCall(
         metadata.contractId,
         selectedFunction.name,
         args,
         wallet.address ?? undefined,
         contractNetwork
       );
-      setCallResult(result);
+      setCallResult(value);
+      setEstimatedFee(minResourceFee);
     } catch (err) {
       setCallError(err instanceof Error ? err.message : "Simulation failed");
     } finally {
@@ -243,6 +250,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                   txHash={txHash}
                   error={callError}
                   network={contractNetwork}
+                  estimatedFee={estimatedFee}
                 />
               </div>
             </div>

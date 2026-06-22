@@ -67,13 +67,18 @@ export function argsFromValues(
   return params.map((p) => valueToScVal(values[p.name] ?? "", p.type, p.inner));
 }
 
+export interface SimulateResult {
+  value: unknown;
+  minResourceFee: string | null;
+}
+
 export async function simulateCall(
   contractId: string,
   fnName: string,
   args: xdr.ScVal[],
   sourceAddress: string | undefined,
   network: StellarNetwork
-): Promise<unknown> {
+): Promise<SimulateResult> {
   const sorobanServer = getSorobanServer(network);
   const passphrase = getNetworkPassphrase(network);
 
@@ -97,11 +102,16 @@ export async function simulateCall(
     throw new Error(result.error);
   }
 
+  const minResourceFee =
+    "minResourceFee" in result && result.minResourceFee != null
+      ? String(result.minResourceFee)
+      : null;
+
   if ("result" in result && result.result?.retval) {
-    return scValToNative(result.result.retval);
+    return { value: scValToNative(result.result.retval), minResourceFee };
   }
 
-  return null;
+  return { value: null, minResourceFee };
 }
 
 export interface InvokeResult {
