@@ -52,8 +52,12 @@ function validateAddress(value: string): string | null {
   return "Must be a valid Stellar address (G...) or contract ID (C...)";
 }
 
+export function stripHexPrefix(value: string): string {
+  return value.trim().replace(/^0x/i, "");
+}
+
 function validateBytes(value: string): string | null {
-  const trimmed = value.trim();
+  const trimmed = stripHexPrefix(value);
   if (!trimmed) return "Hex string is required";
   if (trimmed.length % 2 !== 0) return "Hex string must have an even length";
   if (!HEX_REGEX.test(trimmed)) return "Only hex characters (0-9, a-f) allowed";

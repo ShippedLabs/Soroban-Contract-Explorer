@@ -26,7 +26,7 @@ function placeholderFor(param: FunctionParam): string {
     case "Bool":
       return "true / false";
     case "Bytes":
-      return "hex string (no 0x)";
+      return "hex string (0x prefix optional)";
     case "Vec":
       return `comma-separated ${param.inner ?? "values"}`;
     case "Option":

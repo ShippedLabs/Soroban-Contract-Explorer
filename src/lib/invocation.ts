@@ -11,6 +11,7 @@ import {
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
 import { getNetworkPassphrase, getSorobanServer, type StellarNetwork } from "./stellar-client";
+import { stripHexPrefix } from "./validators";
 import type { FunctionParam, SorobanType } from "@/types/contract";
 
 function valueToScVal(
@@ -40,7 +41,7 @@ function valueToScVal(
     case "Symbol":
       return nativeToScVal(value, { type: "symbol" });
     case "Bytes":
-      return nativeToScVal(Buffer.from(value, "hex"));
+      return nativeToScVal(Buffer.from(stripHexPrefix(value), "hex"));
     case "Address":
       return new Address(value.trim()).toScVal();
     case "Vec": {
