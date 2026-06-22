@@ -47,6 +47,8 @@ cp .env.example .env
 npm run dev
 ```
 
+The example environment defaults to Stellar testnet. Set `NEXT_PUBLIC_STELLAR_NETWORK=mainnet` and review the mainnet RPC URL before connecting to production contracts.
+
 Open http://localhost:3000.
 
 ## Documentation

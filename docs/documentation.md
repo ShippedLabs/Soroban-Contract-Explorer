@@ -108,8 +108,8 @@ Configuration is read from environment variables prefixed with `NEXT_PUBLIC_` so
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_STELLAR_NETWORK` | `testnet` | Selects the network. Any value other than `mainnet` is treated as testnet. |
-| `NEXT_PUBLIC_HORIZON_URL` | `https://horizon-testnet.stellar.org` | Horizon endpoint for the chosen network. |
-| `NEXT_PUBLIC_SOROBAN_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban RPC endpoint used for all reads and submissions. |
+| `NEXT_PUBLIC_SOROBAN_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban RPC endpoint used for testnet reads and submissions. |
+| `NEXT_PUBLIC_SOROBAN_MAINNET_RPC_URL` | `https://mainnet.sorobanrpc.com` | Soroban RPC endpoint used when `NEXT_PUBLIC_STELLAR_NETWORK=mainnet`. |
 
 The network passphrase is derived automatically from `NEXT_PUBLIC_STELLAR_NETWORK`. When the value is `mainnet`, the app uses the public network passphrase; otherwise it uses the testnet passphrase.
 
