@@ -104,6 +104,8 @@ export async function simulateCall(
   return null;
 }
 
+export type TxStatus = "submitted" | "pending" | "confirmed" | "failed";
+
 export interface InvokeResult {
   txHash: string;
   value: unknown;
@@ -114,7 +116,8 @@ export async function invokeCall(
   fnName: string,
   args: xdr.ScVal[],
   sourceAddress: string,
-  network: StellarNetwork
+  network: StellarNetwork,
+  onStatus?: (status: TxStatus) => void
 ): Promise<InvokeResult> {
   const sorobanServer = getSorobanServer(network);
   const passphrase = getNetworkPassphrase(network);
@@ -143,22 +146,29 @@ export async function invokeCall(
   const sendResp = await sorobanServer.sendTransaction(signedTx);
 
   if (sendResp.status === "ERROR") {
+    onStatus?.("failed");
     throw new Error(
       `Submission failed: ${JSON.stringify(sendResp.errorResult)}`
     );
   }
 
+  onStatus?.("submitted");
+
   let getResp = await sorobanServer.getTransaction(sendResp.hash);
   let attempts = 0;
   while (getResp.status === "NOT_FOUND" && attempts < 30) {
+    onStatus?.("pending");
     await new Promise((r) => setTimeout(r, 1000));
     getResp = await sorobanServer.getTransaction(sendResp.hash);
     attempts++;
   }
 
   if (getResp.status !== "SUCCESS") {
+    onStatus?.("failed");
     throw new Error(`Transaction ${getResp.status.toLowerCase()}`);
   }
+
+  onStatus?.("confirmed");
 
   const value = getResp.returnValue
     ? scValToNative(getResp.returnValue)

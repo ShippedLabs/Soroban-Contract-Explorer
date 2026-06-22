@@ -11,7 +11,7 @@ import { WalletConnect } from "@/components/wallet-connect";
 import { NetworkToggle } from "@/components/network-toggle";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
-import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
+import { argsFromValues, invokeCall, simulateCall, type TxStatus } from "@/lib/invocation";
 import {
   addRecentContract,
   getRecentContracts,
@@ -53,6 +53,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [txStatus, setTxStatus] = useState<TxStatus | null>(null);
   const [recents, setRecents] = useState<string[]>([]);
 
   // Load contract when ID or Network changes
@@ -80,6 +81,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallResult(null);
     setCallError(null);
     setTxHash(null);
+    setTxStatus(null);
   };
 
   const handleSimulate = async (values: Record<string, string>) => {
@@ -118,7 +120,8 @@ function ContractExplorerInner({ initialContractId }: Props) {
         selectedFunction.name,
         args,
         wallet.address,
-        contractNetwork
+        contractNetwork,
+        setTxStatus
       );
       setTxHash(hash);
       setCallResult(value);
@@ -243,6 +246,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                   txHash={txHash}
                   error={callError}
                   network={contractNetwork}
+                  txStatus={callLoading ? txStatus : null}
                 />
               </div>
             </div>
