@@ -229,8 +229,10 @@ function ContractExplorerInner({ initialContractId }: Props) {
                     fn={selectedFunction}
                     walletConnected={!!wallet.address}
                     loading={callLoading}
+                    hasResult={callResult !== null || !!callError || !!txHash}
                     onSimulate={handleSimulate}
                     onInvoke={handleInvoke}
+                    onClear={resetCallState}
                   />
                 ) : (
                   <p className="text-sm text-neutral-500">
