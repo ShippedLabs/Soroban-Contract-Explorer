@@ -104,6 +104,75 @@ export async function simulateCall(
   return null;
 }
 
+
+type ErrorRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is ErrorRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function readableToken(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return String(value);
+  return null;
+}
+
+function pickReadableField(value: unknown, keys: string[]): string | null {
+  if (!isRecord(value)) return null;
+
+  for (const key of keys) {
+    const direct = readableToken(value[key]);
+    if (direct) return direct;
+  }
+
+  for (const key of keys) {
+    const nested = value[key];
+    if (isRecord(nested)) {
+      const found = pickReadableField(nested, keys);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+function formatSubmissionError(errorResult: unknown): string {
+  const code = pickReadableField(errorResult, [
+    "resultCode",
+    "transactionResultCode",
+    "txResultCode",
+    "code",
+    "status",
+    "name",
+  ]);
+  const message = pickReadableField(errorResult, ["message", "error", "reason"]);
+
+  if (code && message && code !== message) {
+    return `Submission failed (${code}): ${message}`;
+  }
+  if (code) return `Submission failed: ${code}`;
+  if (message) return `Submission failed: ${message}`;
+
+  return "Submission failed. The network returned an unreadable transaction error.";
+}
+
+function formatTransactionStatus(status: string, result: unknown): string {
+  const code = pickReadableField(result, [
+    "resultCode",
+    "transactionResultCode",
+    "txResultCode",
+    "code",
+    "name",
+  ]);
+  const normalizedStatus = status.toLowerCase().replace(/_/g, " ");
+
+  if (code) {
+    return `Transaction ${normalizedStatus}: ${code}`;
+  }
+
+  return `Transaction ${normalizedStatus}. No readable result code was returned.`;
+}
 export interface InvokeResult {
   txHash: string;
   value: unknown;
@@ -143,9 +212,7 @@ export async function invokeCall(
   const sendResp = await sorobanServer.sendTransaction(signedTx);
 
   if (sendResp.status === "ERROR") {
-    throw new Error(
-      `Submission failed: ${JSON.stringify(sendResp.errorResult)}`
-    );
+    throw new Error(formatSubmissionError(sendResp.errorResult));
   }
 
   let getResp = await sorobanServer.getTransaction(sendResp.hash);
@@ -157,7 +224,7 @@ export async function invokeCall(
   }
 
   if (getResp.status !== "SUCCESS") {
-    throw new Error(`Transaction ${getResp.status.toLowerCase()}`);
+    throw new Error(formatTransactionStatus(getResp.status, getResp));
   }
 
   const value = getResp.returnValue
