@@ -17,6 +17,10 @@ function formatValue(value: unknown): string {
   );
 }
 
+function formatErrorLines(error: string): string[] {
+  return error.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -43,9 +47,18 @@ function CopyButton({ text }: { text: string }) {
 
 export function TxResult({ result, txHash, error, network }: Props) {
   if (error) {
+    const errorLines = formatErrorLines(error);
+
     return (
-      <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300 break-all">
-        {error}
+      <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300">
+        <p className="font-semibold text-red-200">Transaction failed</p>
+        <div className="mt-2 flex flex-col gap-1">
+          {(errorLines.length ? errorLines : ["Unable to complete the transaction."]).map((line) => (
+            <p key={line} className="break-words">
+              {line}
+            </p>
+          ))}
+        </div>
       </div>
     );
   }
