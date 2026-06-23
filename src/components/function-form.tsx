@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ContractFunction, FunctionParam } from "@/types/contract";
 import { validateValue } from "@/lib/validators";
 
@@ -36,6 +36,23 @@ function placeholderFor(param: FunctionParam): string {
   }
 }
 
+function isIntegerType(type: FunctionParam["type"] | undefined): boolean {
+  return (
+    type === "U32" ||
+    type === "I32" ||
+    type === "U64" ||
+    type === "I64" ||
+    type === "U128" ||
+    type === "I128"
+  );
+}
+
+function inputModeFor(param: FunctionParam): "numeric" | undefined {
+  if (isIntegerType(param.type)) return "numeric";
+  if (param.type === "Option" && isIntegerType(param.inner)) return "numeric";
+  return undefined;
+}
+
 export function FunctionForm({
   fn,
   walletConnected,
@@ -45,12 +62,16 @@ export function FunctionForm({
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const firstInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const initial: Record<string, string> = {};
     fn.params.forEach((p) => (initial[p.name] = ""));
     setValues(initial);
     setErrors({});
+    if (fn.params.length > 0) {
+      firstInputRef.current?.focus();
+    }
   }, [fn]);
 
   const handleChange = (param: FunctionParam, value: string) => {
@@ -88,14 +109,16 @@ export function FunctionForm({
         <p className="text-xs text-neutral-500 mb-4">No parameters.</p>
       ) : (
         <div className="flex flex-col gap-3 mb-4">
-          {fn.params.map((p) => (
+          {fn.params.map((p, index) => (
             <label key={p.name} className="flex flex-col gap-1">
               <span className="text-xs text-neutral-400 font-mono">
                 {p.name}: {p.type}
                 {p.inner ? `<${p.inner}>` : ""}
               </span>
               <input
+                ref={index === 0 ? firstInputRef : undefined}
                 type="text"
+                inputMode={inputModeFor(p)}
                 value={values[p.name] ?? ""}
                 onChange={(e) => handleChange(p, e.target.value)}
                 placeholder={placeholderFor(p)}
