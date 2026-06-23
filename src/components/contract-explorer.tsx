@@ -58,7 +58,6 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [recents, setRecents] = useState<RecentContract[]>([]);
 
-  // Load contract when ID or Network changes
   useEffect(() => {
     if (initialContractId) {
       load(initialContractId, networkToUse);
@@ -87,6 +86,10 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallResult(null);
     setCallError(null);
     setTxHash(null);
+  };
+
+  const handleClear = () => {
+    resetCallState();
   };
 
   const handleSimulate = async (values: Record<string, string>) => {
@@ -242,6 +245,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                     loading={callLoading}
                     onSimulate={handleSimulate}
                     onInvoke={handleInvoke}
+                    onClear={handleClear}
                   />
                 ) : (
                   <p className="text-sm text-neutral-500">
