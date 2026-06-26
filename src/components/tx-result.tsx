@@ -1,6 +1,6 @@
 "use client";
-
 import { CopyButton } from "@/components/copy-button";
+import { defaultNetwork } from "@/lib/stellar-client";
 
 interface Props {
   result: unknown;
@@ -17,7 +17,6 @@ function formatValue(value: unknown): string {
   );
 }
 
-
 export function TxResult({ result, txHash, error, network }: Props) {
   if (error) {
     return (
@@ -26,10 +25,10 @@ export function TxResult({ result, txHash, error, network }: Props) {
       </div>
     );
   }
-
   if (result === null && !txHash) return null;
 
-  const explorerPath = network === "mainnet" ? "public" : "testnet";
+  const activeNetwork = network ?? defaultNetwork;
+  const explorerPath = activeNetwork === "mainnet" ? "public" : "testnet";
   const explorerUrl = txHash
     ? `https://stellar.expert/explorer/${explorerPath}/tx/${txHash}`
     : null;
@@ -59,7 +58,6 @@ export function TxResult({ result, txHash, error, network }: Props) {
           </p>
         </div>
       )}
-
       {result !== null && (
         <div>
           <div className="flex items-center justify-between mb-1">
