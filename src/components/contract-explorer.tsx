@@ -74,6 +74,19 @@ function ContractExplorerInner({ initialContractId }: Props) {
     }
   }, [metadata?.contractId]);
 
+  // Clear stale call output whenever the selected function changes so the
+  // result panel never shows output that belongs to a different function.
+  useEffect(() => {
+    resetCallState();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedName]);
+
+  // Also clear when a brand-new contract is loaded.
+  useEffect(() => {
+    resetCallState();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metadata?.contractId]);
+
   const handleRemoveRecent = (id: string) => {
     setRecents(removeRecentContract(id));
   };
