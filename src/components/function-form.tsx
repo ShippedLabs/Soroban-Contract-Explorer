@@ -13,6 +13,8 @@ interface Props {
   onClear: () => void;
 }
 
+// isReadOnly: true = read-only (hide Submit), null = unknown (show Submit as fallback)
+
 function placeholderFor(param: FunctionParam): string {
   switch (param.type) {
     case "Address":
@@ -157,19 +159,21 @@ export function FunctionForm({
         >
           {loading ? "Running..." : "Simulate"}
         </button>
-        <button
-          type="button"
-          onClick={handleInvoke}
-          disabled={loading || hasErrors || !walletConnected}
-          title={
-            !walletConnected
-              ? "Connect a wallet to submit"
-              : "Submit transaction"
-          }
-          className="px-3 py-1.5 bg-neutral-200 text-neutral-900 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Submit
-        </button>
+        {fn.isReadOnly !== true && (
+          <button
+            type="button"
+            onClick={handleInvoke}
+            disabled={loading || hasErrors || !walletConnected}
+            title={
+              !walletConnected
+                ? "Connect a wallet to submit"
+                : "Submit transaction"
+            }
+            className="px-3 py-1.5 bg-neutral-200 text-neutral-900 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Submit
+          </button>
+        )}
         <button
           type="button"
           onClick={handleClear}

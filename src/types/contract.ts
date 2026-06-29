@@ -32,7 +32,7 @@ export interface ContractFunction {
   name: string;
   params: FunctionParam[];
   returnType: SorobanType;
-  isReadOnly: boolean;
+  isReadOnly: boolean | null;
 }
 
 export interface ContractMetadata {

@@ -25,9 +25,15 @@ export function FunctionList({ functions, selected, onSelect }: Props) {
     );
   }
 
-  const filteredFunctions = functions.filter((fn) =>
-    fn.name.toLowerCase().includes(filter.toLowerCase())
-  );
+  const readOnlyOrder = (fn: ContractFunction): number => {
+    if (fn.isReadOnly === false) return 0;
+    if (fn.isReadOnly === null) return 1;
+    return 2;
+  };
+
+  const filteredFunctions = functions
+    .filter((fn) => fn.name.toLowerCase().includes(filter.toLowerCase()))
+    .sort((a, b) => readOnlyOrder(a) - readOnlyOrder(b));
 
   return (
     <div className="flex flex-col gap-3">
@@ -56,7 +62,14 @@ export function FunctionList({ functions, selected, onSelect }: Props) {
                       : "bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-700"
                   }`}
                 >
-                  {formatSignature(fn)}
+                  <span className="flex items-center justify-between gap-2 flex-wrap">
+                    <span>{formatSignature(fn)}</span>
+                    {fn.isReadOnly === true && (
+                      <span className="text-xs text-neutral-500 border border-neutral-700 rounded px-1 py-0.5 font-sans shrink-0">
+                        read only
+                      </span>
+                    )}
+                  </span>
                 </button>
               </li>
             );

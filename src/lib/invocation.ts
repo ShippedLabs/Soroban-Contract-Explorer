@@ -4,6 +4,7 @@ import {
   BASE_FEE,
   Contract,
   Keypair,
+  SorobanDataBuilder,
   TransactionBuilder,
   nativeToScVal,
   scValToNative,
@@ -67,13 +68,76 @@ export function argsFromValues(
   return params.map((p) => valueToScVal(values[p.name] ?? "", p.type, p.inner));
 }
 
+// Returns dummy ScVal args for primitive-typed params so we can probe read-only status at
+// load time without user input. Returns null if any param is a complex type (Struct/Enum/Map)
+// that we cannot safely fabricate — those functions stay unresolved until the user simulates.
+function dummyScVal(type: SorobanType, contractId: string): xdr.ScVal | null {
+  switch (type) {
+    case "Address":
+      return new Address(contractId).toScVal();
+    case "U32":
+      return nativeToScVal(0, { type: "u32" });
+    case "I32":
+      return nativeToScVal(0, { type: "i32" });
+    case "U64":
+      return nativeToScVal(BigInt(0), { type: "u64" });
+    case "I64":
+      return nativeToScVal(BigInt(0), { type: "i64" });
+    case "U128":
+      return nativeToScVal(BigInt(0), { type: "u128" });
+    case "I128":
+      return nativeToScVal(BigInt(0), { type: "i128" });
+    case "Bool":
+      return nativeToScVal(false, { type: "bool" });
+    case "String":
+      return nativeToScVal("", { type: "string" });
+    case "Symbol":
+      return nativeToScVal("", { type: "symbol" });
+    case "Bytes":
+      return nativeToScVal(Buffer.alloc(0));
+    case "Vec":
+      return xdr.ScVal.scvVec([]);
+    case "Option":
+      return xdr.ScVal.scvVoid();
+    case "Struct":
+    case "Enum":
+    case "Map":
+    case "Unknown":
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function dummyArgsForParams(
+  params: FunctionParam[],
+  contractId: string
+): xdr.ScVal[] | null {
+  const result: xdr.ScVal[] = [];
+  for (const param of params) {
+    const val = dummyScVal(param.type, contractId);
+    if (val === null) return null;
+    result.push(val);
+  }
+  return result;
+}
+
+export interface SimulateResult {
+  value: unknown;
+  isReadOnly: boolean;
+}
+
+export function isReadOnlyFromTransactionData(builder: SorobanDataBuilder): boolean {
+  return builder.getReadWrite().length === 0;
+}
+
 export async function simulateCall(
   contractId: string,
   fnName: string,
   args: xdr.ScVal[],
   sourceAddress: string | undefined,
   network: StellarNetwork
-): Promise<unknown> {
+): Promise<SimulateResult> {
   const sorobanServer = getSorobanServer(network);
   const passphrase = getNetworkPassphrase(network);
 
@@ -97,11 +161,16 @@ export async function simulateCall(
     throw new Error(result.error);
   }
 
+  const isReadOnly =
+    "transactionData" in result && result.transactionData
+      ? isReadOnlyFromTransactionData(result.transactionData)
+      : false;
+
   if ("result" in result && result.result?.retval) {
-    return scValToNative(result.result.retval);
+    return { value: scValToNative(result.result.retval), isReadOnly };
   }
 
-  return null;
+  return { value: null, isReadOnly };
 }
 
 export interface InvokeResult {

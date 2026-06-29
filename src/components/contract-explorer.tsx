@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
 import { FunctionForm } from "@/components/function-form";
@@ -12,7 +12,7 @@ import { NetworkToggle } from "@/components/network-toggle";
 import { CopyButton } from "@/components/copy-button";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
-import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
+import { argsFromValues, dummyArgsForParams, invokeCall, simulateCall } from "@/lib/invocation";
 import {
   addRecentContract,
   getRecentContracts,
@@ -28,7 +28,6 @@ interface Props {
 
 function ContractExplorerInner({ initialContractId }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const queryNetwork = searchParams.get("network");
@@ -46,6 +45,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
     selectedName,
     selectedFunction,
     selectFunction,
+    updateFunctionReadOnly,
     load,
     network: contractNetwork,
   } = useContract();
@@ -74,6 +74,36 @@ function ContractExplorerInner({ initialContractId }: Props) {
     }
   }, [metadata?.contractId]);
 
+  // Eagerly probe all functions whose params can be expressed as dummy values so that
+  // read-only status is visible immediately after loading, before the user simulates.
+  // Functions with Struct/Enum/Map params cannot be probed this way and stay null (unknown)
+  // until the user manually runs Simulate with real values.
+  // Keyed on contractId rather than the full metadata object so that patching individual
+  // isReadOnly flags via updateFunctionReadOnly does not retrigger this effect.
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    if (!metadata || !contractNetwork) return;
+
+    let cancelled = false;
+    const unresolved = metadata.functions.filter((fn) => fn.isReadOnly === null);
+
+    for (const fn of unresolved) {
+      const dummyArgs = dummyArgsForParams(fn.params, metadata.contractId);
+      if (dummyArgs === null) continue;
+
+      simulateCall(metadata.contractId, fn.name, dummyArgs, undefined, contractNetwork)
+        .then(({ isReadOnly }) => {
+          if (!cancelled) updateFunctionReadOnly(fn.name, isReadOnly);
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metadata?.contractId, contractNetwork, updateFunctionReadOnly]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
   const handleRemoveRecent = (id: string) => {
     setRecents(removeRecentContract(id));
   };
@@ -100,14 +130,15 @@ function ContractExplorerInner({ initialContractId }: Props) {
 
     try {
       const args = argsFromValues(selectedFunction.params, values);
-      const result = await simulateCall(
+      const { value, isReadOnly } = await simulateCall(
         metadata.contractId,
         selectedFunction.name,
         args,
         wallet.address ?? undefined,
         contractNetwork
       );
-      setCallResult(result);
+      updateFunctionReadOnly(selectedFunction.name, isReadOnly);
+      setCallResult(value);
     } catch (err) {
       setCallError(err instanceof Error ? err.message : "Simulation failed");
     } finally {

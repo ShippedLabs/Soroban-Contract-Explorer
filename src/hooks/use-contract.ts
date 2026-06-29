@@ -64,6 +64,18 @@ export function useContract() {
     router.replace(`${pathname}?${params.toString()}`);
   }, [pathname, searchParams, router]);
 
+  const updateFunctionReadOnly = useCallback((name: string, isReadOnly: boolean) => {
+    setMetadata((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        functions: prev.functions.map((f) =>
+          f.name === name ? { ...f, isReadOnly } : f
+        ),
+      };
+    });
+  }, []);
+
   const selectedFunction: ContractFunction | null =
     metadata?.functions.find((f) => f.name === selectedName) ?? null;
 
@@ -76,6 +88,7 @@ export function useContract() {
     network,
     load,
     selectFunction,
+    updateFunctionReadOnly,
   };
 }
 

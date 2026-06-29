@@ -56,8 +56,8 @@ async function extractSpecEntries(
   wasm: Uint8Array
 ): Promise<xdr.ScSpecEntry[]> {
   const bytes = new Uint8Array(wasm);
-  const module = await WebAssembly.compile(bytes);
-  const sections = WebAssembly.Module.customSections(module, "contractspecv0");
+  const wasmModule = await WebAssembly.compile(bytes);
+  const sections = WebAssembly.Module.customSections(wasmModule, "contractspecv0");
   if (sections.length === 0) {
     throw new Error("No contract spec found in WASM");
   }
@@ -66,6 +66,7 @@ async function extractSpecEntries(
   const entries: xdr.ScSpecEntry[] = [];
 
   while (!reader.eof) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     entries.push((xdr.ScSpecEntry as any).read(reader));
   }
 
@@ -142,6 +143,7 @@ function mapSpecType(
       }
 
       if (udtEntry.switch().name === "scSpecEntryUdtStructV0") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const structFields = udtEntry.udtStructV0().fields().map((field: any) => {
           const mapped = mapSpecType(field.type(), entries);
           return {
@@ -161,6 +163,7 @@ function mapSpecType(
       }
 
       if (udtEntry.switch().name === "scSpecEntryUdtEnumV0") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cases = udtEntry.udtEnumV0().cases().map((c: any) => c.name().toString());
         return {
           type: "Enum",
@@ -201,7 +204,7 @@ function extractFunctions(entries: xdr.ScSpecEntry[]): ContractFunction[] {
     const returnType: SorobanType =
       outputs.length > 0 ? mapSpecType(outputs[0], entries).type : "Unknown";
 
-    functions.push({ name, params, returnType, isReadOnly: false });
+    functions.push({ name, params, returnType, isReadOnly: null });
   }
 
   return functions;
