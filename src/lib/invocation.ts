@@ -31,6 +31,14 @@ function valueToScVal(
       return nativeToScVal(BigInt(value), { type: "u128" });
     case "I128":
       return nativeToScVal(BigInt(value), { type: "i128" });
+    case "U256":
+      return nativeToScVal(BigInt(value), { type: "u256" });
+    case "I256":
+      return nativeToScVal(BigInt(value), { type: "i256" });
+    case "Timepoint":
+      return nativeToScVal(BigInt(value), { type: "timepoint" });
+    case "Duration":
+      return nativeToScVal(BigInt(value), { type: "duration" });
     case "Bool":
       return nativeToScVal(value.trim().toLowerCase() === "true", {
         type: "bool",
