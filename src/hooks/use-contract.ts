@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { loadContractMetadata } from "@/lib/contract-parser";
+import { getReadOnlyMap, setReadOnlyEntry } from "@/lib/readonly-cache";
 import type { ContractMetadata, ContractFunction } from "@/types/contract";
 import type { StellarNetwork } from "@/lib/stellar-client";
 
@@ -27,7 +28,15 @@ export function useContract() {
 
     try {
       const data = await loadContractMetadata(contractId, targetNetwork);
-      setMetadata(data);
+      const cachedMap = typeof window !== "undefined" ? getReadOnlyMap(contractId) : {};
+      const hydrated: ContractMetadata = {
+        ...data,
+        functions: data.functions.map((fn) => ({
+          ...fn,
+          isReadOnly: fn.name in cachedMap ? cachedMap[fn.name] : null,
+        })),
+      };
+      setMetadata(hydrated);
       setNetwork(targetNetwork);
 
       const targetPath = `/contract/${contractId}`;
@@ -67,6 +76,7 @@ export function useContract() {
   const updateFunctionReadOnly = useCallback((name: string, isReadOnly: boolean) => {
     setMetadata((prev) => {
       if (!prev) return prev;
+      setReadOnlyEntry(prev.contractId, name, isReadOnly);
       return {
         ...prev,
         functions: prev.functions.map((f) =>

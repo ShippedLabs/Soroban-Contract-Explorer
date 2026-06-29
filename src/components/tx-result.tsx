@@ -7,6 +7,7 @@ interface Props {
   txHash: string | null;
   error: string | null;
   network?: "testnet" | "mainnet" | null;
+  feeEstimate?: { stroops: string; xlm: string } | null;
 }
 
 function formatValue(value: unknown): string {
@@ -17,7 +18,7 @@ function formatValue(value: unknown): string {
   );
 }
 
-export function TxResult({ result, txHash, error, network }: Props) {
+export function TxResult({ result, txHash, error, network, feeEstimate }: Props) {
   if (error) {
     return (
       <div className="border border-red-900 bg-red-950/30 rounded p-3 text-xs text-red-300 break-all">
@@ -25,7 +26,7 @@ export function TxResult({ result, txHash, error, network }: Props) {
       </div>
     );
   }
-  if (result === null && !txHash) return null;
+  if (result === null && !txHash && !feeEstimate) return null;
 
   const activeNetwork = network ?? defaultNetwork;
   const explorerPath = activeNetwork === "mainnet" ? "public" : "testnet";
@@ -35,6 +36,15 @@ export function TxResult({ result, txHash, error, network }: Props) {
 
   return (
     <div className="border border-neutral-800 rounded p-3 bg-neutral-950 flex flex-col gap-3">
+      {feeEstimate && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-neutral-500">Estimated fee</p>
+          <p className="text-xs font-mono text-neutral-300">
+            {feeEstimate.xlm} XLM
+            <span className="text-neutral-600 ml-1">({feeEstimate.stroops} stroops)</span>
+          </p>
+        </div>
+      )}
       {txHash && (
         <div>
           <div className="flex items-center justify-between mb-1">

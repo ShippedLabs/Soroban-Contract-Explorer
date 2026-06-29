@@ -12,7 +12,8 @@ import { NetworkToggle } from "@/components/network-toggle";
 import { CopyButton } from "@/components/copy-button";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
-import { argsFromValues, dummyArgsForParams, invokeCall, simulateCall } from "@/lib/invocation";
+import { BASE_FEE } from "@stellar/stellar-sdk";
+import { argsFromValues, dummyArgsForParams, invokeCall, simulateCall, stroopsToXlm } from "@/lib/invocation";
 import {
   addRecentContract,
   getRecentContracts,
@@ -56,6 +57,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [feeEstimate, setFeeEstimate] = useState<{ stroops: string; xlm: string } | null>(null);
   const [recents, setRecents] = useState<RecentContract[]>([]);
 
   useEffect(() => {
@@ -116,7 +118,15 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallResult(null);
     setCallError(null);
     setTxHash(null);
+    setFeeEstimate(null);
   };
+
+  useEffect(() => {
+    setCallResult(null);
+    setCallError(null);
+    setTxHash(null);
+    setFeeEstimate(null);
+  }, [selectedName]);
 
   const handleClear = () => {
     resetCallState();
@@ -130,7 +140,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
 
     try {
       const args = argsFromValues(selectedFunction.params, values);
-      const { value, isReadOnly } = await simulateCall(
+      const { value, isReadOnly, minResourceFee } = await simulateCall(
         metadata.contractId,
         selectedFunction.name,
         args,
@@ -139,6 +149,10 @@ function ContractExplorerInner({ initialContractId }: Props) {
       );
       updateFunctionReadOnly(selectedFunction.name, isReadOnly);
       setCallResult(value);
+      if (minResourceFee && !isReadOnly) {
+        const totalStroops = (BigInt(minResourceFee) + BigInt(BASE_FEE)).toString();
+        setFeeEstimate({ stroops: totalStroops, xlm: stroopsToXlm(totalStroops) });
+      }
     } catch (err) {
       setCallError(err instanceof Error ? err.message : "Simulation failed");
     } finally {
@@ -277,6 +291,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                     onSimulate={handleSimulate}
                     onInvoke={handleInvoke}
                     onClear={handleClear}
+                    onInputChange={() => setFeeEstimate(null)}
                   />
                 ) : (
                   <p className="text-sm text-neutral-500">
@@ -289,6 +304,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                   txHash={txHash}
                   error={callError}
                   network={contractNetwork}
+                  feeEstimate={feeEstimate}
                 />
               </div>
             </div>

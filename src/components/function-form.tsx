@@ -11,6 +11,7 @@ interface Props {
   onSimulate: (values: Record<string, string>) => void;
   onInvoke: (values: Record<string, string>) => void;
   onClear: () => void;
+  onInputChange?: () => void;
 }
 
 // isReadOnly: true = read-only (hide Submit), null = unknown (show Submit as fallback)
@@ -63,6 +64,7 @@ export function FunctionForm({
   onSimulate,
   onInvoke,
   onClear,
+  onInputChange,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
@@ -84,6 +86,7 @@ export function FunctionForm({
       ...prev,
       [param.name]: validateValue(value, param.type, param.inner),
     }));
+    onInputChange?.();
   };
 
   const hasErrors = Object.values(errors).some(Boolean);

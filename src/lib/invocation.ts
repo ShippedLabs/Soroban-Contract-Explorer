@@ -125,6 +125,11 @@ export function dummyArgsForParams(
 export interface SimulateResult {
   value: unknown;
   isReadOnly: boolean;
+  minResourceFee: string | null;
+}
+
+export function stroopsToXlm(stroops: string): string {
+  return (Number(stroops) / 10_000_000).toFixed(7);
 }
 
 export function isReadOnlyFromTransactionData(builder: SorobanDataBuilder): boolean {
@@ -166,11 +171,16 @@ export async function simulateCall(
       ? isReadOnlyFromTransactionData(result.transactionData)
       : false;
 
+  const minResourceFee =
+    "minResourceFee" in result && result.minResourceFee
+      ? result.minResourceFee
+      : null;
+
   if ("result" in result && result.result?.retval) {
-    return { value: scValToNative(result.result.retval), isReadOnly };
+    return { value: scValToNative(result.result.retval), isReadOnly, minResourceFee };
   }
 
-  return { value: null, isReadOnly };
+  return { value: null, isReadOnly, minResourceFee };
 }
 
 export interface InvokeResult {
