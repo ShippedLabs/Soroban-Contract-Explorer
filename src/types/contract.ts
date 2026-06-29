@@ -46,3 +46,5 @@ export interface InvocationResult {
   error?: string;
   txHash?: string;
 }
+
+export type InvokeStatus = "submitted" | "pending" | "confirmed" | "failed";

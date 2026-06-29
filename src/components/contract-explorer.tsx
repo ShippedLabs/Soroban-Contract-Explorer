@@ -22,6 +22,7 @@ import {
   type RecentContract,
 } from "@/lib/recent-contracts";
 import { defaultNetwork, type StellarNetwork } from "@/lib/stellar-client";
+import type { InvokeStatus } from "@/types/contract";
 
 interface Props {
   initialContractId?: string;
@@ -58,6 +59,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [feeEstimate, setFeeEstimate] = useState<{ stroops: string; xlm: string } | null>(null);
+  const [invokeStatus, setInvokeStatus] = useState<InvokeStatus | null>(null);
   const [recents, setRecents] = useState<RecentContract[]>([]);
 
   useEffect(() => {
@@ -119,6 +121,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallError(null);
     setTxHash(null);
     setFeeEstimate(null);
+    setInvokeStatus(null);
   };
 
   useEffect(() => {
@@ -126,6 +129,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallError(null);
     setTxHash(null);
     setFeeEstimate(null);
+    setInvokeStatus(null);
   }, [selectedName]);
 
   const handleClear = () => {
@@ -173,7 +177,8 @@ function ContractExplorerInner({ initialContractId }: Props) {
         selectedFunction.name,
         args,
         wallet.address,
-        contractNetwork
+        contractNetwork,
+        setInvokeStatus
       );
       setTxHash(hash);
       setCallResult(value);
@@ -305,6 +310,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                   error={callError}
                   network={contractNetwork}
                   feeEstimate={feeEstimate}
+                  invokeStatus={invokeStatus}
                 />
               </div>
             </div>
