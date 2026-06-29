@@ -104,6 +104,67 @@ export async function simulateCall(
   return null;
 }
 
+function camelToWords(s: string): string {
+  return s
+    .replace(/^(tx|op|invoke)/, "")
+    .replace(/([A-Z])/g, " $1")
+    .trim()
+    .toLowerCase();
+}
+
+function parseSendError(errorResult: xdr.TransactionResult | undefined): string {
+  if (!errorResult) return "Transaction submission failed";
+  try {
+    const txCode = errorResult.result().switch().name;
+    if (txCode === "txFailed") {
+      try {
+        const ops = (errorResult.result() as unknown as { results: () => xdr.OperationResult[] }).results();
+        if (ops?.length) {
+          const opSwitch = ops[0].switch().name;
+          if (opSwitch === "opInner") {
+            const tr = ops[0].tr();
+            const innerCode = tr.invokeHostFunctionResult().switch().name;
+            return `Transaction failed: ${camelToWords(innerCode)}`;
+          }
+          return `Transaction failed: ${camelToWords(opSwitch)}`;
+        }
+      } catch { /* fall through */ }
+      return "Transaction failed";
+    }
+    return `Transaction rejected: ${camelToWords(txCode)}`;
+  } catch {
+    return "Transaction submission failed";
+  }
+}
+
+function parseGetError(status: string, resultXdr?: xdr.TransactionResult): string {
+  if (status === "NOT_FOUND") {
+    return "Transaction not confirmed after 30s — it may still be processing or has expired";
+  }
+  if (status === "FAILED" && resultXdr) {
+    try {
+      const txCode = resultXdr.result().switch().name;
+      if (txCode === "txFailed") {
+        try {
+          const ops = (resultXdr.result() as unknown as { results: () => xdr.OperationResult[] }).results();
+          if (ops?.length) {
+            const opSwitch = ops[0].switch().name;
+            if (opSwitch === "opInner") {
+              const tr = ops[0].tr();
+              const innerCode = tr.invokeHostFunctionResult().switch().name;
+              return `Transaction failed: ${camelToWords(innerCode)}`;
+            }
+            return `Transaction failed: ${camelToWords(opSwitch)}`;
+          }
+        } catch { /* fall through */ }
+        return "Transaction failed on-chain";
+      }
+      return `Transaction rejected: ${camelToWords(txCode)}`;
+    } catch { /* fall through */ }
+  }
+  return `Transaction ${status.toLowerCase()}`;
+}
+
 export interface InvokeResult {
   txHash: string;
   value: unknown;
@@ -143,9 +204,7 @@ export async function invokeCall(
   const sendResp = await sorobanServer.sendTransaction(signedTx);
 
   if (sendResp.status === "ERROR") {
-    throw new Error(
-      `Submission failed: ${JSON.stringify(sendResp.errorResult)}`
-    );
+    throw new Error(parseSendError(sendResp.errorResult));
   }
 
   let getResp = await sorobanServer.getTransaction(sendResp.hash);
@@ -157,7 +216,12 @@ export async function invokeCall(
   }
 
   if (getResp.status !== "SUCCESS") {
-    throw new Error(`Transaction ${getResp.status.toLowerCase()}`);
+    throw new Error(
+      parseGetError(
+        getResp.status,
+        "resultXdr" in getResp ? (getResp.resultXdr as xdr.TransactionResult) : undefined
+      )
+    );
   }
 
   const value = getResp.returnValue
