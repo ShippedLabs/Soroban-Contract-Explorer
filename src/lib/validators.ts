@@ -10,6 +10,9 @@ const I64_MAX = BigInt("9223372036854775807");
 const U128_MAX = BigInt("340282366920938463463374607431768211455");
 const I128_MIN = BigInt("-170141183460469231731687303715884105728");
 const I128_MAX = BigInt("170141183460469231731687303715884105727");
+const U256_MAX = BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935");
+const I256_MIN = BigInt("-57896044618658097711785492504343953926634992332820282019728792003956564819968");
+const I256_MAX = BigInt("57896044618658097711785492504343953926634992332820282019728792003956564819967");
 
 const SYMBOL_REGEX = /^[a-zA-Z0-9_]{0,32}$/;
 const HEX_REGEX = /^[0-9a-fA-F]*$/;
@@ -93,6 +96,14 @@ export function validateValue(
       return validateInt(value, BigInt(0), U128_MAX, "U128");
     case "I128":
       return validateInt(value, I128_MIN, I128_MAX, "I128");
+    case "U256":
+      return validateInt(value, BigInt(0), U256_MAX, "U256");
+    case "I256":
+      return validateInt(value, I256_MIN, I256_MAX, "I256");
+    case "Timepoint":
+      return validateInt(value, BigInt(0), U64_MAX, "Timepoint (seconds since epoch)");
+    case "Duration":
+      return validateInt(value, BigInt(0), U64_MAX, "Duration (seconds)");
     case "Bool":
       return validateBool(value);
     case "Bytes":

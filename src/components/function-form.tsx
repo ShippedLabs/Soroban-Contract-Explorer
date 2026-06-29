@@ -26,7 +26,13 @@ function placeholderFor(param: FunctionParam): string {
     case "I64":
     case "U128":
     case "I128":
+    case "U256":
+    case "I256":
       return "number";
+    case "Timepoint":
+      return "unix timestamp (seconds)";
+    case "Duration":
+      return "duration in seconds";
     case "Bool":
       return "true / false";
     case "Bytes":

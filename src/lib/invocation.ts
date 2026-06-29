@@ -32,6 +32,14 @@ function valueToScVal(
       return nativeToScVal(BigInt(value), { type: "u128" });
     case "I128":
       return nativeToScVal(BigInt(value), { type: "i128" });
+    case "U256":
+      return nativeToScVal(BigInt(value), { type: "u256" });
+    case "I256":
+      return nativeToScVal(BigInt(value), { type: "i256" });
+    case "Timepoint":
+      return nativeToScVal(BigInt(value), { type: "timepoint" });
+    case "Duration":
+      return nativeToScVal(BigInt(value), { type: "duration" });
     case "Bool":
       return nativeToScVal(value.trim().toLowerCase() === "true", {
         type: "bool",
@@ -227,6 +235,29 @@ const TX_RESULT_MESSAGES: Record<string, string> = {
   txInternalError: "Network internal error, try again",
 };
 
+const INVOKE_HOST_FUNCTION_MESSAGES: Record<string, string> = {
+  invokeHostFunctionMalformed: "Contract call was malformed",
+  invokeHostFunctionTrapped: "Contract execution failed",
+  invokeHostFunctionResourceLimitExceeded: "Contract exceeded resource limits",
+  invokeHostFunctionEntryArchived: "Contract data entry has been archived",
+  invokeHostFunctionInsufficientRefundableFee: "Insufficient fee to cover contract execution",
+};
+
+// "opInner" wraps the operation-specific result; for invokeHostFunction ops the real
+// failure reason (trapped, resource limit, etc.) lives one level deeper.
+function describeOpResult(op: xdr.OperationResult): string {
+  const opCode = op.switch().name as string;
+  if (opCode === "opInner") {
+    try {
+      const innerCode = op.tr().invokeHostFunctionResult().switch().name as string;
+      return INVOKE_HOST_FUNCTION_MESSAGES[innerCode] ?? `Operation failed (${innerCode})`;
+    } catch {
+      return "Operation failed";
+    }
+  }
+  return TX_RESULT_MESSAGES[opCode] ?? `Operation failed (${opCode})`;
+}
+
 export function parseSubmitError(errorResult: xdr.TransactionResult | undefined): string {
   if (!errorResult) return "Transaction rejected by network";
   try {
@@ -243,8 +274,7 @@ export function parseTransactionError(resultXdr: xdr.TransactionResult): string 
     if (topCode === "txFailed") {
       const opResults = resultXdr.result().results();
       if (opResults.length > 0) {
-        const opCode = opResults[0].switch().name as string;
-        return TX_RESULT_MESSAGES[opCode] ?? `Operation failed (${opCode})`;
+        return describeOpResult(opResults[0]);
       }
     }
     return TX_RESULT_MESSAGES[topCode] ?? `Transaction failed (${topCode})`;
