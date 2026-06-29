@@ -97,6 +97,14 @@ function mapSpecType(
       return { type: "U128" };
     case "scSpecTypeI128":
       return { type: "I128" };
+    case "scSpecTypeU256":
+      return { type: "U256" };
+    case "scSpecTypeI256":
+      return { type: "I256" };
+    case "scSpecTypeTimepoint":
+      return { type: "Timepoint" };
+    case "scSpecTypeDuration":
+      return { type: "Duration" };
     case "scSpecTypeBool":
       return { type: "Bool" };
     case "scSpecTypeString":

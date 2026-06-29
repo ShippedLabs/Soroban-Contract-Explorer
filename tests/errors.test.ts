@@ -12,6 +12,23 @@ function mockTxResult(topCode: string, opCodes: string[] = []): xdr.TransactionR
   } as unknown as xdr.TransactionResult;
 }
 
+// Same shape, but the op result is "opInner" wrapping an invokeHostFunction result
+function mockTxResultWithInnerHostFunctionResult(innerCode: string): xdr.TransactionResult {
+  return {
+    result: () => ({
+      switch: () => ({ name: "txFailed" }),
+      results: () => [
+        {
+          switch: () => ({ name: "opInner" }),
+          tr: () => ({
+            invokeHostFunctionResult: () => ({ switch: () => ({ name: innerCode }) }),
+          }),
+        },
+      ],
+    }),
+  } as unknown as xdr.TransactionResult;
+}
+
 describe("parseSubmitError", () => {
   it("returns fallback when errorResult is undefined", () => {
     expect(parseSubmitError(undefined)).toBe("Transaction rejected by network");
@@ -67,6 +84,26 @@ describe("parseTransactionError", () => {
     expect(parseTransactionError(mockTxResult("txFailed", ["opNewUnknownCode"]))).toBe(
       "Operation failed (opNewUnknownCode)"
     );
+  });
+
+  it("drills into invokeHostFunctionResult for opInner trapped contracts", () => {
+    expect(
+      parseTransactionError(mockTxResultWithInnerHostFunctionResult("invokeHostFunctionTrapped"))
+    ).toBe("Contract execution failed");
+  });
+
+  it("drills into invokeHostFunctionResult for resource limit errors", () => {
+    expect(
+      parseTransactionError(
+        mockTxResultWithInnerHostFunctionResult("invokeHostFunctionResourceLimitExceeded")
+      )
+    ).toBe("Contract exceeded resource limits");
+  });
+
+  it("falls back for opInner with unknown invokeHostFunctionResult code", () => {
+    expect(
+      parseTransactionError(mockTxResultWithInnerHostFunctionResult("invokeHostFunctionNewCode"))
+    ).toBe("Operation failed (invokeHostFunctionNewCode)");
   });
 
   it("returns top-level message for txFailed with no op results", () => {
