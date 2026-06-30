@@ -36,7 +36,7 @@ export interface ContractFunction {
   name: string;
   params: FunctionParam[];
   returnType: SorobanType;
-  isReadOnly: boolean;
+  isReadOnly: boolean | null;
 }
 
 export interface ContractMetadata {
@@ -50,3 +50,5 @@ export interface InvocationResult {
   error?: string;
   txHash?: string;
 }
+
+export type InvokeStatus = "submitted" | "pending" | "confirmed" | "failed";

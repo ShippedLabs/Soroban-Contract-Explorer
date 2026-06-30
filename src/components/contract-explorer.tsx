@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ContractSearch } from "@/components/contract-search";
 import { FunctionList } from "@/components/function-list";
 import { FunctionForm } from "@/components/function-form";
@@ -12,7 +12,8 @@ import { NetworkToggle } from "@/components/network-toggle";
 import { CopyButton } from "@/components/copy-button";
 import { useContract } from "@/hooks/use-contract";
 import { useWallet } from "@/hooks/use-wallet";
-import { argsFromValues, invokeCall, simulateCall } from "@/lib/invocation";
+import { BASE_FEE } from "@stellar/stellar-sdk";
+import { argsFromValues, dummyArgsForParams, invokeCall, simulateCall, stroopsToXlm } from "@/lib/invocation";
 import {
   addRecentContract,
   getRecentContracts,
@@ -21,6 +22,7 @@ import {
   type RecentContract,
 } from "@/lib/recent-contracts";
 import { defaultNetwork, type StellarNetwork } from "@/lib/stellar-client";
+import type { InvokeStatus } from "@/types/contract";
 
 interface Props {
   initialContractId?: string;
@@ -28,7 +30,6 @@ interface Props {
 
 function ContractExplorerInner({ initialContractId }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const queryNetwork = searchParams.get("network");
@@ -46,6 +47,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
     selectedName,
     selectedFunction,
     selectFunction,
+    updateFunctionReadOnly,
     load,
     network: contractNetwork,
   } = useContract();
@@ -56,6 +58,8 @@ function ContractExplorerInner({ initialContractId }: Props) {
   const [callResult, setCallResult] = useState<unknown>(null);
   const [callError, setCallError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [feeEstimate, setFeeEstimate] = useState<{ stroops: string; xlm: string } | null>(null);
+  const [invokeStatus, setInvokeStatus] = useState<InvokeStatus | null>(null);
   const [recents, setRecents] = useState<RecentContract[]>([]);
 
   useEffect(() => {
@@ -74,18 +78,35 @@ function ContractExplorerInner({ initialContractId }: Props) {
     }
   }, [metadata?.contractId]);
 
-  // Clear stale call output whenever the selected function changes so the
-  // result panel never shows output that belongs to a different function.
+  // Eagerly probe all functions whose params can be expressed as dummy values so that
+  // read-only status is visible immediately after loading, before the user simulates.
+  // Functions with Struct/Enum/Map params cannot be probed this way and stay null (unknown)
+  // until the user manually runs Simulate with real values.
+  // Keyed on contractId rather than the full metadata object so that patching individual
+  // isReadOnly flags via updateFunctionReadOnly does not retrigger this effect.
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    resetCallState();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedName]);
+    if (!metadata || !contractNetwork) return;
 
-  // Also clear when a brand-new contract is loaded.
-  useEffect(() => {
-    resetCallState();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metadata?.contractId]);
+    let cancelled = false;
+    const unresolved = metadata.functions.filter((fn) => fn.isReadOnly === null);
+
+    for (const fn of unresolved) {
+      const dummyArgs = dummyArgsForParams(fn.params, metadata.contractId);
+      if (dummyArgs === null) continue;
+
+      simulateCall(metadata.contractId, fn.name, dummyArgs, undefined, contractNetwork)
+        .then(({ isReadOnly }) => {
+          if (!cancelled) updateFunctionReadOnly(fn.name, isReadOnly);
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [metadata?.contractId, contractNetwork, updateFunctionReadOnly]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleRemoveRecent = (id: string) => {
     setRecents(removeRecentContract(id));
@@ -99,7 +120,17 @@ function ContractExplorerInner({ initialContractId }: Props) {
     setCallResult(null);
     setCallError(null);
     setTxHash(null);
+    setFeeEstimate(null);
+    setInvokeStatus(null);
   };
+
+  useEffect(() => {
+    setCallResult(null);
+    setCallError(null);
+    setTxHash(null);
+    setFeeEstimate(null);
+    setInvokeStatus(null);
+  }, [selectedName]);
 
   const handleClear = () => {
     resetCallState();
@@ -113,14 +144,19 @@ function ContractExplorerInner({ initialContractId }: Props) {
 
     try {
       const args = argsFromValues(selectedFunction.params, values);
-      const result = await simulateCall(
+      const { value, isReadOnly, minResourceFee } = await simulateCall(
         metadata.contractId,
         selectedFunction.name,
         args,
         wallet.address ?? undefined,
         contractNetwork
       );
-      setCallResult(result);
+      updateFunctionReadOnly(selectedFunction.name, isReadOnly);
+      setCallResult(value);
+      if (minResourceFee && !isReadOnly) {
+        const totalStroops = (BigInt(minResourceFee) + BigInt(BASE_FEE)).toString();
+        setFeeEstimate({ stroops: totalStroops, xlm: stroopsToXlm(totalStroops) });
+      }
     } catch (err) {
       setCallError(err instanceof Error ? err.message : "Simulation failed");
     } finally {
@@ -141,7 +177,8 @@ function ContractExplorerInner({ initialContractId }: Props) {
         selectedFunction.name,
         args,
         wallet.address,
-        contractNetwork
+        contractNetwork,
+        setInvokeStatus
       );
       setTxHash(hash);
       setCallResult(value);
@@ -259,6 +296,7 @@ function ContractExplorerInner({ initialContractId }: Props) {
                     onSimulate={handleSimulate}
                     onInvoke={handleInvoke}
                     onClear={handleClear}
+                    onInputChange={() => setFeeEstimate(null)}
                   />
                 ) : (
                   <p className="text-sm text-neutral-500">
@@ -271,6 +309,8 @@ function ContractExplorerInner({ initialContractId }: Props) {
                   txHash={txHash}
                   error={callError}
                   network={contractNetwork}
+                  feeEstimate={feeEstimate}
+                  invokeStatus={invokeStatus}
                 />
               </div>
             </div>

@@ -11,7 +11,10 @@ interface Props {
   onSimulate: (values: Record<string, string>) => void;
   onInvoke: (values: Record<string, string>) => void;
   onClear: () => void;
+  onInputChange?: () => void;
 }
+
+// isReadOnly: true = read-only (hide Submit), null = unknown (show Submit as fallback)
 
 function placeholderFor(param: FunctionParam): string {
   switch (param.type) {
@@ -67,6 +70,7 @@ export function FunctionForm({
   onSimulate,
   onInvoke,
   onClear,
+  onInputChange,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string | null>>({});
@@ -88,6 +92,7 @@ export function FunctionForm({
       ...prev,
       [param.name]: validateValue(value, param.type, param.inner),
     }));
+    onInputChange?.();
   };
 
   const hasErrors = Object.values(errors).some(Boolean);
@@ -163,19 +168,21 @@ export function FunctionForm({
         >
           {loading ? "Running..." : "Simulate"}
         </button>
-        <button
-          type="button"
-          onClick={handleInvoke}
-          disabled={loading || hasErrors || !walletConnected}
-          title={
-            !walletConnected
-              ? "Connect a wallet to submit"
-              : "Submit transaction"
-          }
-          className="px-3 py-1.5 bg-neutral-200 text-neutral-900 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Submit
-        </button>
+        {fn.isReadOnly !== true && (
+          <button
+            type="button"
+            onClick={handleInvoke}
+            disabled={loading || hasErrors || !walletConnected}
+            title={
+              !walletConnected
+                ? "Connect a wallet to submit"
+                : "Submit transaction"
+            }
+            className="px-3 py-1.5 bg-neutral-200 text-neutral-900 rounded text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Submit
+          </button>
+        )}
         <button
           type="button"
           onClick={handleClear}
